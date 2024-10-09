@@ -1,0 +1,87 @@
+---
+title: "pam_code"
+author: "Hayden Vega"
+date: "2024-10-09"
+output: html_document
+---
+```{r}
+devtools::install_github("an-bui/calecopal")
+install.packages("installr")
+install.packages("viridis")
+```
+
+```{r setup, include=FALSE}
+library(janitor)
+library(tidyverse)
+library(viridis)
+```
+
+## Load in Data
+```{r}
+
+pam_healed <- read.csv("pam_healed.csv", header = TRUE, sep = ",")
+
+pam_undisturbed_healed <- read.csv("pam_undisturbed_healed.csv", header = TRUE, sep = ",")
+
+```
+
+
+## Boxplot of Pam for undisturbed tissue
+```{r}
+
+
+pam_undisturbed_healed %>% 
+  ggplot(aes (x = fish, y = fv_fm, fill = fish)) +
+  geom_boxplot()+
+  theme_bw()
+
+  ## Boxplot of PAM including x = wound and  fish = fill
+pam_undisturbed_healed %>% 
+  ggplot (aes (x = wound, y = fv_fm, fill = fish))+
+  geom_boxplot()+
+  theme_bw()
+
+  ## Boxplot of PAM including x = fish and fill = wound
+
+pam_undisturbed_healed %>% 
+  ggplot (aes (x = fish, y = fv_fm, fill = wound))+
+  geom_boxplot()+
+  theme_bw()
+
+pam_undisturbed_healed %>% 
+  ggplot (aes (x = wound, y = fv_fm, fill = wound))+
+  geom_boxplot()+
+  theme_bw()
+
+```
+
+
+## Boxplot of PAM for healed tissue
+```{r}
+pam_healed %>% 
+  ggplot(aes (x = fish, y = fv_fm, fill = fish)) +
+  geom_boxplot()+
+  theme_bw()
+
+pam_healed %>% 
+  ggplot(aes (x = fish, y = fv_fm, fill = wound)) +
+  geom_boxplot()+
+  theme_bw()
+
+pam_healed %>% 
+  ggplot(aes (x = wound, y = fv_fm, fill = wound)) +
+  geom_boxplot()+
+  theme_bw()
+
+pam_healed %>% 
+  ggplot(aes (x = wound, y = fv_fm, fill = fish)) +
+  geom_boxplot()+
+  theme_bw()
+
+
+
+
+
+
+```
+
