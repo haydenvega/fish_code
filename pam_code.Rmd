@@ -14,6 +14,13 @@ install.packages("viridis")
 library(janitor)
 library(tidyverse)
 library(viridis)
+library(lme4)
+library(ggeffects)
+library(sjlabelled)
+library(DHARMa)
+library(parameters)
+library(effects)
+library(MuMIn)
 ```
 
 ## Load in Data
@@ -83,5 +90,110 @@ pam_healed %>%
 
 
 
+```
+
+
+#Multiple Regression
+
+```{r}
+pam_all_regression <- lmer(fv_fm ~ wound * fish + (1 | f0), data = pam_undisturbed_healed)
+summary(pam_all_regression)
+anova(pam_all_regression)
+
+pam_healed_regression <- lmer(fv_fm ~ wound * fish + (1 | f0), data = pam_healed)
+summary(pam_healed_regression)
+anova(pam_healed_regression)
+```
+
+#Anova
+```{r}
+pam_all_anova <- aov(fv_fm ~ wound * fish, data = pam_undisturbed_healed)
+
+summary(pam_all_anova)
+
+pam_healed_anova <- aov(fv_fm ~ wound * fish, data = pam_healed)
+```
+#Tukey
+```{r}
+pam_all_tukey <- TukeyHSD(pam_all_anova)
+pam_all_tukey
+
+pam_healed_tukey <- TukeyHSD(pam_healed_anova)
+pam_healed_tukey
+```
+
+
+#R2 values
+```{r}
+
+MuMIn::r.squaredGLMM(pam_all_regression)
+
+MuMIn::r.squaredGLMM(pam_healed_regression)
+```
+
+```{r}
+pam_all_predictions <- ggpredict(pam_all_regression, terms = c("wound", "fish")) %>% 
+  as_tibble() %>% 
+  rename(wound = group)
+```
+
+#Visualize pam_all
+```{r}
+pam_all_plot <- ggplot() +
+  
+  # plot the raw data as points
+  geom_point(data = pam_undisturbed_healed,
+             aes(x = wound,
+                 y = fv_fm),
+             alpha = 0.5,
+             color = "black",
+             shape = 21) +
+  
+  # plot a 1:1 reference line
+ # geom_abline(slope = 1, 
+  #            intercept = 0,
+   #           linetype = 2,
+    #          linewidth = 1,
+     #         color = "black") +
+  
+  # plot the confidence interval 
+ # geom_ribbon(data = pam_all_predictions,
+  #            aes(x = x,
+   #               y = predicted,
+    #              ymin = conf.low,
+     #             ymax = conf.high),
+      #        alpha = 0.2,
+       #       fill = "black") +
+  
+  # plot the prediction line
+#  geom_line(data = pam_all_predictions,
+ #           aes(x = x,
+  #              y = predicted),
+   #         color = "black",
+    #        linewidth = 1) +
+  
+  # labels
+  labs(x = "Wound Intensity",
+       y = "Photosynthetic Efficiency") 
+
+pam_all_plot
+
+```
+
+#Plot TUKEY
+
+```{r  fig.width = 20, fig.height = 40}
+tukey_plot_all <- aov(fv_fm ~ wound:fish, data = pam_undisturbed_healed)
+
+tukey_plot_all_plot <- TukeyHSD(tukey_plot_all)
+plot(tukey_plot_all_plot)
+
+
+tukey_plot_healed <- aov(fv_fm~wound:fish, data = pam_healed)
+
+tukey_healed <- TukeyHSD(tukey_plot_healed)
+plot(tukey_healed)
+
+#Seems that large: no fish is significantly different from small and large with fish; suggests that as wound size increases (high metabolic stress) fish effects emerge. within treatments with fish did not vary. and treatments within small wounds did not vary significantly from each other. #supports positive gradient hypothesis #IS THIS SUPPORTED BY BUOYANT WEIGHT DATA?
 ```
 
