@@ -1,0 +1,72 @@
+---
+title: "Buoyant Weight to Skeletal Mass Example"
+author: "Ninah Munk"
+date: "2024-10-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library("tidyverse")
+library("readxl")
+library("janitor")
+library('readxl')
+
+```
+
+Read in raw data. Combine into one long data frame.
+```{r}
+weight_initial<- read_xlsx("/Users/ninahmunk/Desktop/Projects/Acropora_Regeneration-main/Growth/Data/bouyantweight_initial.xlsx", sheet= "raw_data")%>%clean_names()%>%select(-calibration)%>%mutate(timepoint = "initial")
+weight_24hr<- read_xlsx("/Users/ninahmunk/Desktop/Projects/Acropora_Regeneration-main/Growth/Data/bouyantweight_24hr.xlsx", sheet= "raw_data")%>%clean_names()%>%select(-bouyantweight_redo_if_applicable)%>%mutate(timepoint = "postwound")
+weight_day10<- read_xlsx("/Users/ninahmunk/Desktop/Projects/Acropora_Regeneration-main/Growth/Data/bouyantweight_day10.xlsx", sheet= "raw_data")%>%clean_names()%>%select(-bouyantweight_redo_if_applicable)%>%mutate(timepoint = "day10")
+weight_final<- read_xlsx("/Users/ninahmunk/Desktop/Projects/Acropora_Regeneration-main/Growth/Data/bouyantweight_final.xlsx", sheet= "raw_data")%>%clean_names()%>%mutate(timepoint = "final")
+
+#binding new dataframes together and removing columns I don't need for calculation
+rbind(weight_initial, weight_24hr, weight_day10, weight_final)%>%select(-date, -group, -temp_c, -salinity_ppt, -salt_temp_c ) -> weight.long
+
+```
+
+
+Calculating skeletal mass from buoyant weight
+```{r}
+weight.long%>% 
+  mutate(density_stopper = (air_weight_g * 0.9965)/(air_weight_g - fresh_weight_g))%>%
+  mutate(density_sw = (air_weight_g - salt_weight_g)/ (air_weight_g / density_stopper))%>%
+  mutate(dry_mass = bouyantweight_g / (1 - (density_sw/density_aragonite)))%>%
+  mutate(coral_vol = (dry_mass / (density_aragonite - density_sw))) -> skeletal.mass
+  
+
+```
+
+Remove any corals from dataset if needed
+```{r}
+#clean data
+corals_to_remove <- c(11, 5, 37, 104, 71, 17, 29, 100)
+skeletal.mass.clean <- skeletal.mass[!(skeletal.mass$coral_id %in% corals_to_remove), ]
+```
+
+Standardize weights by surface area. First start by creating standard curve for dowels that were wax dipped
+```{r}
+#wax dipping calibration: calculate surface area of dowels 
+calibration<- read.csv('/Users/ninahmunk/Desktop/Projects/Acropora_Regeneration-main/Surface_Area/Data/20230712_wax_calibration.csv')%>%clean_names()%>%
+  mutate(wax_weight_g = postwax_weight_g - prewax_weight_g)%>%
+  mutate(cal_radius_mm = diameter_mm / 2)%>%
+  mutate(cal_radius_cm = cal_radius_mm /10)%>%
+  mutate(height_cm = height_mm / 10)%>%
+  mutate(CSA_cm2= ((2*3.14*cal_radius_cm*height_cm) + 3.14*(cal_radius_cm)^2)) #curved surface area (CSA) = 2piRH + piR^2 (one area of circle for top of coral)
+
+#calculate the curve coefficients for slope and intercept to apply as the standard
+stnd.curve <- lm(CSA_cm2~wax_weight_g, data=calibration)
+plot(CSA_cm2~wax_weight_g, data=calibration)
+stnd.curve$coefficients
+summary(stnd.curve)$r.squared
+
+#bring in the datasheet with coral samples 
+smpls<- read.csv("/Users/ninahmunk/Desktop/Projects/Acropora_Regeneration-main/Surface_Area/Data/20230712_wax_weights.csv")%>%clean_names()%>%
+#subtract postwax weight from prewax weight
+mutate(wax_weight_g = postwax_weight_g - prewax_weight_g)
+#Calculate surface area using the standard curve
+smpls$SA <- stnd.curve$coefficients[2] * smpls$wax_weight_g + stnd.curve$coefficients[1]
+
+```

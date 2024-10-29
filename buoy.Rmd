@@ -1,0 +1,32 @@
+---
+title: "buoy_weight"
+author: "Hayden Vega"
+date: "2024-10-29"
+output: html_document
+---
+
+```{r}
+library("tidyverse")
+library("readxl")
+library("janitor")
+library('readxl')
+library("here")
+```
+
+```{r}
+buoy_data <- read.csv("fish_regen_buoyantweight (1).csv")
+```
+
+```{r}
+buoy_data%>% 
+  mutate(density_stopper = (air_weight_g * 0.9965)/(air_weight_g - fresh_weight_g))%>%
+  mutate(density_sw = (air_weight_g - salt_weight_g)/ (air_weight_g / density_stopper))%>%
+  mutate(dry_mass = bouyantweight_g / (1 - (density_sw/density_aragonite)))%>%
+  mutate(coral_vol = (dry_mass / (density_aragonite - density_sw))) -> skeletal.mass 
+```
+# graph buoyant data
+```{r}
+#fuck it, put the difference in a new column made with skeleton excel sheet. 
+
+```
+
