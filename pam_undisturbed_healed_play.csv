@@ -1,72 +1,143 @@
 ﻿coral_id,f0,fm,fv_fm,wound,fish
 45,419,1797,700,Large,Fish
+45,419,1797,700,Large,Fish
+46,372,1206,691,No Wound,Fish
 46,372,1206,691,No Wound,Fish
 47,260,807,677,Small,Fish
+47,260,807,677,Small,Fish
+48,408,1359,699,No Wound,No Fish
 48,408,1359,699,No Wound,No Fish
 49,402,1299,690,Small,No Fish
+49,402,1299,690,Small,No Fish
+50,322,1039,690,Small,No Fish
 50,322,1039,690,Small,No Fish
 55,241,793,696,Large,Fish
+55,241,793,696,Large,Fish
+56,429,1409,695,Small,Fish
 56,429,1409,695,Small,Fish
 58,350,1122,688,Large,No Fish
+58,350,1122,688,Large,No Fish
+59,346,1146,698,Large,No Fish
 59,346,1146,698,Large,No Fish
 61,489,1500,680,Small,Fish
+61,489,1500,680,Small,Fish
+62,430,1338,678,Small,Fish
 62,430,1338,678,Small,Fish
 63,450,1432,685,No Wound,Fish
+63,450,1432,685,No Wound,Fish
+64,206,642,671,No Wound,No Fish
 64,206,642,671,No Wound,No Fish
 65,333,1021,673,Large,No Fish
+65,333,1021,673,Large,No Fish
+67,329,1055,688,No Wound,No Fish
 67,329,1055,688,No Wound,No Fish
 69,277,880,685,Large,No Fish
+69,277,880,685,Large,No Fish
+71,446,1363,672,Large,No Fish
 71,446,1363,672,Large,No Fish
 72,483,1565,691,Small,Fish
+72,483,1565,691,Small,Fish
+74,437,1341,674,No Wound,Fish
 74,437,1341,674,No Wound,Fish
 75,401,1282,687,Large,Fish
+75,401,1282,687,Large,Fish
+76,345,1112,689,Small,No Fish
 76,345,1112,689,Small,No Fish
 77,416,1355,692,No Wound,Fish
+77,416,1355,692,No Wound,Fish
+78,511,1603,681,No Wound,No Fish
 78,511,1603,681,No Wound,No Fish
 79,340,1064,608,Large,No Fish
+79,340,1064,608,Large,No Fish
+80,329,1039,683,Small,No Fish
 80,329,1039,683,Small,No Fish
 81,486,1585,693,No Wound,Fish
+81,486,1585,693,No Wound,Fish
+83,431,1378,687,No Wound,No Fish
 83,431,1378,687,No Wound,No Fish
 84,325,949,657,No Wound,No Fish
+84,325,949,657,No Wound,No Fish
+85,338,1049,677,No Wound,No Fish
 85,338,1049,677,No Wound,No Fish
 86,290,895,675,No Wound,No Fish
+86,290,895,675,No Wound,No Fish
+87,574,1932,702,Small,No Fish
 87,574,1932,702,Small,No Fish
 88,377,1246,697,No Wound,No Fish
+88,377,1246,697,No Wound,No Fish
+89,241,742,675,Small,No Fish
 89,241,742,675,Small,No Fish
 90,503,1625,690,No Wound,Fish
+90,503,1625,690,No Wound,Fish
+91,339,1124,697,Small,No Fish
 91,339,1124,697,Small,No Fish
 95,348,1071,675,Large,No Fish
+95,348,1071,675,Large,No Fish
+96,390,1216,679,Small,Fish
 96,390,1216,679,Small,Fish
 98,456,1458,687,No Wound,No Fish
+98,456,1458,687,No Wound,No Fish
+99,513,1596,678,Large,Fish
 99,513,1596,678,Large,Fish
 100,446,1396,680,Small,Fish
+100,446,1396,680,Small,Fish
+101,444,1453,694,Small,Fish
 101,444,1453,694,Small,Fish
 102,540,1808,701,No Wound,Fish
+102,540,1808,701,No Wound,Fish
+103,420,1211,653,Large,No Fish
 103,420,1211,653,Large,No Fish
 104,397,1231,677,Small,No Fish
+104,397,1231,677,Small,No Fish
+105,381,1308,708,Small,No Fish
 105,381,1308,708,Small,No Fish
 106,336,1148,707,Small,Fish
+106,336,1148,707,Small,Fish
+107,505,1658,695,Large,Fish
 107,505,1658,695,Large,Fish
 108,329,1117,705,No Wound,Fish
+108,329,1117,705,No Wound,Fish
+109,568,1873,696,Large,Fish
 109,568,1873,696,Large,Fish
 110,556,1718,676,Large,Fish
+110,556,1718,676,Large,Fish
+111,328,1027,680,Large,No Fish
 111,328,1027,680,Large,No Fish
 112,397,1284,690,No Wound,No Fish
+112,397,1284,690,No Wound,No Fish
+113,457,1437,681,Large,Fish
 113,457,1437,681,Large,Fish
 114,453,1506,699,Small,Fish
+114,453,1506,699,Small,Fish
+115,365,1161,685,Small,No Fish
 115,365,1161,685,Small,No Fish
 116,522,1531,695,Small,Fish
+116,522,1531,695,Small,Fish
+117,333,1090,694,No Wound,No Fish
 117,333,1090,694,No Wound,No Fish
 118,325,1023,682,No Wound,Fish
+118,325,1023,682,No Wound,Fish
+119,347,1104,685,Large,Fish
 119,347,1104,685,Large,Fish
 120,510,1594,680,No Wound,Fish
+120,510,1594,680,No Wound,Fish
+121,183,566,676,Large,No Fish
 121,183,566,676,Large,No Fish
 122,391,1227,681,Small,Fish
+122,391,1227,681,Small,Fish
+123,354,1150,692,Large,Fish
 123,354,1150,692,Large,Fish
 124,326,928,648,Small,No Fish
+124,326,928,648,Small,No Fish
+125,494,1419,668,No Wound,Fish
 125,494,1419,668,No Wound,Fish
 126,534,1663,678,Large,Fish
+126,534,1663,678,Large,Fish
+127,380,1190,680,Large,Fish
 127,380,1190,680,Large,Fish
 128,490,1485,670,No Wound,Fish
+128,490,1485,670,No Wound,Fish
 129,205,600,658,Small,No Fish
+129,205,600,658,Small,No Fish
+130,414,1292,679,Large,No Fish
 130,414,1292,679,Large,No Fish
