@@ -100,7 +100,7 @@ pam_all_regression <- lmer(fv_fm ~ wound * fish + (1 | f0), data = pam_undisturb
 summary(pam_all_regression)
 anova(pam_all_regression)
 
-pam_healed_regression <- lmer(fv_fm ~ wound * fish + (1 | f0), data = pam_healed)
+pam_healed_regression <- lmer(fv_fm ~ wound + fish + (1 | f0), data = pam_healed)
 summary(pam_healed_regression)
 anova(pam_healed_regression)
 ```
@@ -195,5 +195,94 @@ tukey_healed <- TukeyHSD(tukey_plot_healed)
 plot(tukey_healed)
 
 #Seems that large: no fish is significantly different from small and large with fish; suggests that as wound size increases (high metabolic stress) fish effects emerge. within treatments with fish did not vary. and treatments within small wounds did not vary significantly from each other. #supports positive gradient hypothesis #IS THIS SUPPORTED BY BUOYANT WEIGHT DATA?
+```
+#RANDOMIZATION TEST ARGHHHH
+```{r}
+#PAM first
+#looking at the mean between wounds
+
+photo_means <- pam_healed %>% 
+  group_by(wound) %>% 
+  summarize(mean = mean(fv_fm))
+
+#Actually randomize
+null_photo_dist <- replicate(1000, {
+  photo_means <- pam_healed %>% 
+    mutate(wound = sample(wound, n())) %>% #this shuffles the selection of data
+  group_by(wound) %>% 
+  summarize(mean = mean(fv_fm))
+
+ diff_means <- photo_means$mean[2]-
+  photo_means$mean[1]
+ 
+ diff_means
+})
+
+ggplot(tibble(null_photo_dist), aes(null_photo_dist)) +
+  geom_histogram(bins = 20, 
+                 color = "cornflowerblue", 
+                 fill = NA)+
+  geom_vline(xintercept = diff_means, 
+             color = "firebrick")
+
+
+```
+#Means between fish within wounds
+```{r}
+large <- pam_healed %>% 
+  filter(wound == "Large")
+
+photo_means <- large %>% 
+  group_by(fish) %>% 
+  summarize(mean = mean(fv_fm))
+
+#Actually randomize
+nulll_photo_dist <- replicate(1000, {
+  photo_means <- large %>% 
+    mutate(fish = sample(fish, n())) %>% #this shuffles the selection of data
+  group_by(fish) %>% 
+  summarize(mean = mean(fv_fm))
+
+ diff_means <- photo_means$mean[2] - photo_means$mean[1]
+ 
+ diff_means
+})
+
+ggplot(tibble(nulll_photo_dist), aes(nulll_photo_dist)) +
+  geom_histogram(bins = 20, 
+                 color = "cornflowerblue", 
+                 fill = NA)+
+  geom_vline(xintercept = diff_means, 
+             color = "firebrick")+
+  view()
+```
+#do it for small wounds
+```{r}
+small <- pam_healed %>% 
+  filter(wound == "Small")
+
+photo_means <- small %>% 
+  group_by(fish) %>% 
+  summarize(mean = mean(fv_fm))
+
+#Actually randomize
+nullll_photo_dist <- replicate(1000, {
+  photo_means <- small %>% 
+    mutate(fish = sample(fish, n())) %>% #this shuffles the selection of data
+  group_by(fish) %>% 
+  summarize(mean = mean(fv_fm))
+
+ diff_means <- photo_means$mean[2]
+ 
+ diff_means
+})
+
+ggplot(tibble(nullll_photo_dist), aes(nullll_photo_dist)) +
+  geom_histogram(bins = 20, 
+                 color = "cornflowerblue", 
+                 fill = NA)+
+  geom_vline(xintercept = diff_means, 
+             color = "firebrick")
+
 ```
 
