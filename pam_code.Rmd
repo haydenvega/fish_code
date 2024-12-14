@@ -310,3 +310,26 @@ ggplot(tibble(nullll_photo_dist), aes(nullll_photo_dist)) +
              color = "firebrick")
 ```
 
+#something New
+```{r}
+null_photo_dist <- replicate(1000, {
+  photo_means <- pam_healed %>%
+    mutate(wound = sample(wound, n()), #this shuffles the selection of data
+                     fish_presence = sample(fish, n())) %>% #this shuffles the selection of for fish presence
+  group_by(wound) %>%
+  summarize(mean = mean(fv_fm))
+
+ diff_means <- photo_means$mean[2]-
+  photo_means$mean[1]
+
+ diff_means
+})
+
+ggplot(tibble(null_photo_dist), aes(null_photo_dist)) +
+  geom_histogram(bins = 20,
+                 color = "cornflowerblue",
+                 fill = NA)+
+  geom_vline(xintercept = diff_means,
+             color = "firebrick")
+```
+
