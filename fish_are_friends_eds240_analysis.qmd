@@ -4,6 +4,7 @@ author: "Hayden Vega"
 format: html
 editor: visual
 ---
+
 ```{r}
 library(janitor)
 library(tidyverse)
