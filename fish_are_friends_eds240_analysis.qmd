@@ -4,6 +4,18 @@ author: "Hayden Vega"
 format: html
 editor: visual
 ---
+```{r}
+library(janitor)
+library(tidyverse)
+library(viridis)
+library(lme4)
+library(ggeffects)
+library(sjlabelled)
+library(DHARMa)
+library(parameters)
+library(effects)
+library(MuMIn)
+```
 
 # Summary
 
