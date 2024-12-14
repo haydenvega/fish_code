@@ -5,14 +5,6 @@ format: html
 editor: visual
 ---
 
-```{r}
-library("tidyverse")
-library("readxl")
-library("janitor")
-library('readxl')
-library("here")
-```
-
 # Summary
 
 This document summarizes the data collected in an experiment comparing the effect of wounding intensity (none, small, large) and fish presence (*Dascyllus flavicaudus*) on a coral's (*Pocillopora sp.*) photosynthetic efficiency. Our results show no significant effect of wounding intensity on photosynthetic efficiency among all treatments and datasets. Our results also show a positive, yet not significant, effect of fish presence on the photosynthetic efficiency of healed tissue among high wound intensity treatments only. Under no and small wounding intensities for all data sets the effect of fish on photosynthetic efficiency was negligible.
@@ -34,8 +26,6 @@ Luckily, corals have some pretty good friends in the fight against climate chang
 Our experiment is interested in elucidating how coral health changes as a function of wounding intensity and fish presence. We studied this relationship in a tank experiment. We collected 72 *Pocillopora sp.* corals and gave them either no, small, or a large wound. We then spread equal numbers of each wounding treatment into six tanks (12 corals/tank). Thirty grams of the coral sheltering fish, the Yellowtail Dascyllus (*Dascyllus flavicaudus*) was added to half of these tanks, creating six unique treatments. Corals were housed in treatment tanks for five weeks, and all physiological data was collected at the end.
 
 {{< video local-actuallyfasttimelapse.mp4>}}
-
-
 
 ## Analysis
 
