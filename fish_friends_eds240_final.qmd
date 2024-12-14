@@ -19,13 +19,13 @@ Thank you for your time.
 
 {{< video https://www.youtube.com/watch?v=c6mVl6fAxLw&t=34s&pp=ygUZZmlzaCBhcmUgZnJpZW5kcyBub3QgZm9vZA%3D%3D >}}
 
-Some scientists think that your grandchildren may never see a natural coral reef(citation). Corals are in global decline, and climate change is throwing new stressors at our corals faster than they can adapt. One of these new stressors and an emerging source of coral mortality is wounding(citation). This refers to the mechanical breakdown of coral tissue and skeleton, which can be caused by a variety of sources from a carelessly placed anchor to an abandoned fishing net. Yet, the most devastating and prevalent source of coral wounds is from predators.
+Some scientists think that your grandchildren may never see a natural coral reef(Hoegh-Guldberg 2019). Corals are in global decline, and climate change is throwing new stressors at our corals faster than they can adapt. One of these new stressors and an emerging source of coral mortality is wounding(Bright 2015). This refers to the mechanical breakdown of coral tissue and skeleton, which can be caused by a variety of sources from a carelessly placed anchor to an abandoned fishing net. Yet, the most devastating and prevalent source of coral wounds is from predators.
 
 ![Crown of Thorns Seastar (*Acanthaster planci*) is a deadly coral predator, consuming 10 meters^2^ of coral year^-1^](cots.jpg)
 
-Wounds are deadly to corals because they strain a coral's physiological machinery. Wounds have been shown to decrease a coral's ability to grow, reproduce, and photosynthesize.When wounding intensity is high, corals may not have the energy to heal a wound or deal with the strain associated with the damage. Ultimately, this results in an individual's death. Predation pressure and wounding is only predicted to increase with climate change, resulting in a future where predators may kill entire reefs.
+Wounds are deadly to corals because they strain a coral's physiological machinery. Wounds have been shown to decrease a coral's ability to grow, reproduce, and photosynthesize (Munk 2024).When wounding intensity is high, corals may not have the energy to heal a wound or deal with the strain associated with the damage. Ultimately, this results in an individual's death. Predation pressure and wounding is only predicted to increase with climate change, resulting in a future where predators may kill entire reefs.
 
-Luckily, corals have some pretty good friends in the fight against climate change and wounding. Fish, particularly those who use corals as shelter, have been shown to alleviate strain on a coral's physiological machinery. Fish have been shown to increase a coral's ability to grow, reproduce, and photosynthesize.Fish help corals make more energy by providing nutrients through excretion and increasing the waterflow around the coral.
+Luckily, corals have some pretty good friends in the fight against climate change and wounding. Fish, particularly those who use corals as shelter, have been shown to alleviate strain on a coral's physiological machinery(Shantz 2023). Fish have been shown to increase a coral's ability to grow, reproduce, and photosynthesize.Fish help corals make more energy by providing nutrients through excretion and increasing the waterflow around the coral(Shantz 2023).
 
 ![Yellowtail Dascyllus (*Dascyllus flavicaudus*) sheltering among the coral *Pocillopora sp.*](dascyllus.png)
 
@@ -212,3 +212,14 @@ Our experiment could be suffering from a small sample size. Each of the six uniq
 The results, although not significant, suggest that fish have an effect on coral health during high stress events. This supports the theory that some systems have a stress gradient that governs the magnitude of benefits provided by positive interactions, like the ones fish provide to corals. In such systems, resilience is conferred by positive interactions, which means that there is still hope for our reefs. There's also still much work to be done, and these data suggest that disentangling the links between coral resilience and the biodiversity of organisms on and around the reef may bring new insights into the future of our reefs.
 
 ![Fig 7. Hayden diving in Mo'orea, French Polynesia, and thanking Max and Leo for a great quarter.](max_leo.png)
+
+
+##### *Bibliography*
+
+Bright, A. J., Cameron, C. M., & Miller, M. W. (2015). Enhanced susceptibility to predation in corals of compromised condition. PeerJ, 3, e1239.
+
+Hoegh-Guldberg, O., Pendleton, L., & Kaup, A. (2019). People and the changing nature of coral reefs. Regional Studies in Marine Science, 30, 100699.
+
+Munk, N. J. (2024). Host and Symbiont Physiology During Wound Regeneration in Acropora pulchra Under Warming Conditions (Master's thesis, University of California, Santa Barbara).
+
+Shantz, A. A., Ladd, M. C., Ezzat, L., Schmitt, R. J., Holbrook, S. J., Schmeltzer, E., ... & Burkepile, D. E. (2023). Positive interactions between corals and damselfish increase coral resistance to temperature stress. Global Change Biology, 29(2), 417-431.
