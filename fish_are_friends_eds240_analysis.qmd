@@ -128,7 +128,7 @@ sum(abs(null_photo_dist) > abs(diff_means))/
 pam_healed <- read_csv("pam_healed.csv")
 ```
 
-#### Qualitative visualize data yields no discernible difference among or across treatments
+#### Qualitative visualize data shows a potential link between fish presence and increased photosynthetic efficiency
 
 ```{r}
 pam_healed %>% 

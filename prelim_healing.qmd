@@ -1,0 +1,18 @@
+---
+title: "prelim_healing"
+format: html
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+heal <- read.csv("prelim_coral_heal_wsn.csv")
+```
+
+```{r}
+heal %>% 
+  ggplot(aes(day, percent_healed, color = treatment))+
+  geom_line()+
+  theme_bw()
+```
+
