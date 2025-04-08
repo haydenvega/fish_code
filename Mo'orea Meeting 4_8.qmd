@@ -1,0 +1,135 @@
+---
+title: "Adrian & Hayden Meeting Agenda"
+date: 04/08/2025
+format: 
+  html:
+    echo: true
+    eval: true
+    code-tools: true
+    code-fold: true
+    code-summary: "Show me the code!"
+    code-block-border-left: "#183d3d"
+---
+ > **Summary** This meeting is to chat about Summer 2025 Mo'orea plans. Hayden has followed up on the following action items: Contacting Maheata & Molly about forms (travel and field experiement), broad analysis of fish vs no fish wound closure, and reading the Rinkevich paper. Action items that still need to be done are designing a rough field experiment to send to Maheata, organize github repo (ReadMe & folders), and organize google drive (folders & metadata), and take a look at standardizing coral growth by size (allometry). Adrian will (maybe) share any projects that fit adjacent to a paper/project relevant to current regen priorities. Goals for this meeting are to update our next steps. 
+
+
+# Forms
+
+I've reached out to Maheata about forms for travel and the field experiment. Awaiting response!
+
+# Broad Wound closure analysis
+
+Twenty eight out of forty corals healed. Seventeen of which were in the presence of fish and 11 of which were not. Small wounds healed more often than large wounds, but the effect is small. Fifteen small wounds healed and thirteen large wounds healed.  
+```{r, warning=FALSE, message=FALSE}
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##                                    Setup                                 ----
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#.........................load libraries.........................
+library(tidyverse)
+library(ggplot2)
+library(showtext)
+
+#.........................reading in data.........................
+y_n <- read.csv("Copy of fish_regen_mastersheet_wound closure_necrosis - mastersheet.csv")
+
+y_n$fish <- as.factor(y_n$fish)
+
+y_n$wound <- as.factor(y_n$wound)
+
+#.........................aesthetics.........................
+theme_set(theme_bw() +
+            theme(panel.grid = element_blank(), 
+                  plot.background = element_blank()))
+
+fish_palette <- c("Present" = "#009bb0", 
+                   "Not Present" = "#b4450e")
+
+font_add_google(name = "Marcellus", family = "marc")
+font_add_google(name = "Josefin Sans", family = "josefin")
+font_add_google(name = "Lexend", family = "lex")
+showtext_auto()
+
+#.........................cleaning.........................
+ clean <- y_n %>% 
+  filter(!is.na(wound_close), wound_close != "") %>% 
+  mutate(wound_close = ifelse(wound_close == "no-barely" | wound_close == "no - barely", "no", wound_close)) %>% 
+  mutate(fish = ifelse(fish == 1, "Present", "Not Present")) %>% 
+  mutate(wound_close = ifelse(wound_close == "yes", "Yes", "No"))
+ 
+ fish_yes <- clean %>% 
+   filter(wound_close == "Yes") %>% 
+   group_by(fish) %>% 
+   summarize(num_yes = n())
+ fish_nah <- clean %>% 
+   filter(wound_close == "No") %>% 
+   group_by(fish) %>% 
+   summarize(num_no = n())
+#.........................plotting.........................
+clean %>% 
+  ggplot(aes(x = wound_close, fill = fish))+
+  geom_bar(position = "dodge")+
+  labs(x = "Wound Closure", 
+       y = "Count", 
+       fill = "Fish Presence")+
+  scale_fill_manual(values = fish_palette)+
+  theme(
+    legend.title = element_text(family = "josefin"), 
+    axis.title.x = element_text(family = "josefin"), 
+    axis.title.y = element_text(family = "josefin"))
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+
+#.........................cleaning.........................
+
+clean <- y_n %>% 
+   filter(!is.na(wound_close), wound_close != "") %>% 
+  mutate(wound = ifelse(wound == 1, "Small", "Large")) %>% 
+  mutate(wound_close = ifelse(wound_close == "yes", "Yes", "No"))
+
+#.........................counting.........................
+
+wound_yes <- clean %>% 
+   filter(wound_close == "Yes") %>% 
+   group_by(wound) %>% 
+   summarize(num_yes = n())
+ wound_nah <- clean %>% 
+   filter(wound_close == "No") %>% 
+   group_by(wound) %>% 
+   summarize(num_no = n())
+
+#.........................aesthetics.........................
+
+wound_palette <- c("Large" = "#ffbf00", 
+                   "Small" = "#be8333")
+
+#.........................plotting.........................
+
+clean %>% 
+  ggplot(aes(x = wound_close, fill = wound))+
+  geom_bar(position = "dodge")+
+  labs(x = "Wound Closure", 
+       y = "Count", 
+       fill = "Wound Size")+
+  scale_fill_manual(values = wound_palette)+
+  theme(
+    legend.title = element_text(family = "josefin"), 
+    axis.title.x = element_text(family = "josefin"), 
+    axis.title.y = element_text(family = "josefin"))
+ 
+```
+
+
+# Rinkevich Paper Analysis
+
+>**TLDR** Rinkevich suggests that there may be multiple factors (life history, environment ) influencing the balance of metabolic budgets during regeneration besides just energy allocation.Rather than energy allocation, Rinkevich suggests it's resource allocation, particuarly stem cells that influence regeneration.
+
+Rinkevich says there is a perceived trade off between fecundity and regeneration. Three arguments challenge this perception: reproduction is hierarchical and thus not subject to energetic constraints of lower class energetic demands, shallow-water scleractinians may not be prone to energy constraints, and regeneration is a regulated process expressed through programmed events and not directly related to the energy trade-off principle. Rather trade offs between stem cells should be considered as a limiting reagent shaping reproductive activities during regeneration. 
+
+- Right off the bat, I'm skeptical of reason 2 and 3. Stem cell theory sounds reasonable, though.  
+
+- I like how they talk about energy thresholds and that a coral may balance their metabolic budgets despite wounding. This reasoning could be used to cast doubt on reason 2 and 3. 
+
+- Value in the paper is that it suggests that regeneration may be more complicated, species specific, and deviant from energy allocation. 

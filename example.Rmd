@@ -50,7 +50,11 @@ Standardize weights by surface area. First start by creating standard curve for 
 ```{r}
 #wax dipping calibration: calculate surface area of dowels 
 calibration<- read.csv('/Users/ninahmunk/Desktop/Projects/Acropora_Regeneration-main/Surface_Area/Data/20230712_wax_calibration.csv')%>%clean_names()%>%
-  mutate(wax_weight_g = postwax_weight_g - prewax_weight_g)%>%
+```
+
+
+```{r}
+mutate(wax_weight_g = postwax_weight_g - prewax_weight_g)%>%
   mutate(cal_radius_mm = diameter_mm / 2)%>%
   mutate(cal_radius_cm = cal_radius_mm /10)%>%
   mutate(height_cm = height_mm / 10)%>%
