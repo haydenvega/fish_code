@@ -1,0 +1,66 @@
+---
+title: "4_15_meeting_figures"
+format: html
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(lme4)
+library(showtext)
+```
+
+
+```{r}
+
+
+wound_closure <- read.csv("Copy of fish_regen_mastersheet_wound closure_necrosis - mastersheet.csv")
+
+wound_closure_clean <- wound_closure %>% 
+   filter(!is.na(wound_close), wound_close != "") %>% 
+  mutate(wound_close = ifelse(wound_close == "no-barely" | wound_close == "no - barely", "no", wound_close)) %>% 
+  mutate(fish = ifelse(fish == 1, "Present", "Not Present")) %>% 
+  mutate(wound_close = ifelse(wound_close == "yes", "Yes", "No")) %>% 
+  mutate(wound = ifelse(wound == 1, "Small", "Large")) %>% 
+  mutate(wound_close = as.character(wound_close))
+
+wound_prop <- wound_closure_clean %>% 
+  group_by(wound, fish) |>
+  summarize(prop_healed = mean(wound_close == "Yes"))
+
+wound_palette <- c("Small" = "#ffbf00", 
+                   "Large" = "#be8333")
+font_add_google(name = "Josefin Sans", family = "josefin")
+showtext_auto()
+theme_set(theme_bw() +
+            theme(panel.grid = element_blank(), 
+                  plot.background = element_blank()))
+```
+
+```{r}
+
+wound_prop %>% 
+  ggplot(aes(fish, prop_healed, fill = wound))+
+  geom_col(position = "dodge")+
+  labs(x = "Fish Presence", 
+       y = "Proportion Healed", 
+       fill = "Wound Size")+
+  scale_fill_manual(values = wound_palette)+
+  theme(
+    legend.title = element_text(family = "josefin"), 
+    axis.title.x = element_text(family = "josefin"), 
+    axis.title.y = element_text(family = "josefin"))
+```
+
+```{r}
+wound_closure_lm <- wound_closure_clean %>% 
+  mutate(wound_close = as.factor(wound_close))
+
+fish_lm <- lm(prop_healed~fish, data = wound_prop)
+summary(fish_lm)
+
+wound_lm <- lm(prop_healed~wound + fish, data = wound_prop)
+summary(wound_lm)
+
+```
+
