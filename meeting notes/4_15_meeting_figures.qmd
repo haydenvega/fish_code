@@ -64,3 +64,12 @@ summary(wound_lm)
 
 ```
 
+```{r}
+fish_glm <- glm(prop_healed~fish, family = binomial, data = wound_prop )
+summary(fish_lm)
+
+wound_glm <- glm(prop_healed~wound, family = binomial, data = wound_prop)
+summary(wound_glm)
+
+```
+
