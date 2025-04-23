@@ -3,6 +3,7 @@ title: "Buoyant Weight to Skeletal Mass Example"
 author: "Ninah Munk"
 date: "2024-10-21"
 output: html_document
+description: Example code given by Ninah Munk to process buoyant weight data for the fish regen project. 
 ---
 
 ```{r setup, include=FALSE}

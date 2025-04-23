@@ -3,6 +3,7 @@ title: "pam_code"
 author: "Hayden Vega"
 date: "2024-10-09"
 output: html_document
+description: An analysis of PAM data from the fish regen project. Included are visualizations, linear models, ANOVAs, Tukey tests, and randomization tests. 
 ---
 ```{r}
 devtools::install_github("an-bui/calecopal")

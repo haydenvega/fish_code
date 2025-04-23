@@ -3,6 +3,7 @@ title: "buoy_weight"
 author: "Hayden Vega"
 date: "2024-10-29"
 output: html_document
+description: An rmd with buoyant weight analysis of corals collected for the fish-regen project. The process is incomplete as of 4/25. 
 ---
 
 ```{r}

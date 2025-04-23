@@ -1,6 +1,7 @@
 ---
 title: "prelim_healing"
 format: html
+description: A visualization of the preliminary wound closure data for the fish regen project. Originally made for the 2024 WSN conference. 
 ---
 
 ```{r}
