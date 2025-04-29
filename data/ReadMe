@@ -1,0 +1,62 @@
+This folder contains all data for the fish regeneration project. 
+
+Copy of fish_regen_mastersheet_wound closure_necrosis - mastersheet.csv contains primarily wound closure data 
+  - Variables included are coral_id, date_collected, date_fragmented, fish, wound, tank, notes, wound_close, and necrosis. 
+    - coral_id: The numerical id of each unique coral specimen
+    - date_collected: The date the coral was collected YYYYMMDD
+    - date_fragmented: The date the specimen was fragmented YYYYMMDD
+    - fish: This variable denotes whether the coral was housed with fish (1) or without fish (0)
+    - wound: This variable describes which of the three wounds the coral specimen received: large (2), small (1), and none (0)
+    - tank: This variables describes the tank that the coral was in. There are six tank options (1-6)
+    - notes: This variable contains text about substitutions or other misc. topics
+    - wound_close: This variable denotes whether or not a coral specimen was fully healed by the end of the 21 day experiment (yes, no) NA values are assigned to corals which had no wound. 
+    - necrosis: This variable denotes whether or not a coral specimen experienced necrosis during the experiment (yes, no) 
+
+coral_delta.csv contains data for the change in buoyant weight values 
+    - Variables included are date, coral_id, buoyantweight_g, air_temp_c, air_weight_g, fresh_temp_c, fresh_weight_g, salt_temp_c, salt_weight_g, density_aragonite, wound, fish, density_stopper, density_sw, dry_mass, coral_vol, dry_mass_delta, vol_delta
+        - date: This variable denotes the date that the data were collected YYYYMMDD
+        - coral_id: The numerical id of each unique coral specimen
+        - buoyantweight_g: This variable denotes the measured weight of each coral specimen when submerged in seawater
+        - air_temp_c: This variable describes the air temperature when the data were collected (degrees Celsius)
+        - air_weight_g: This variable describes the weight of the calibrating object in grams
+        - fresh_temp_c: This variable describes the temperature of the freshwater that the calibrating object was measured (degrees Celsius)
+        - fresh_weight_g: The weight of the calibrating object when submerged in freshwater in grams
+        - salt_temp_c: The temperature of the saltwater that the calibrating object was submerged in (degrees Celsius)
+        - salt_weight_g: The weight of the calibrating object when submerged in saltwater in grams
+        - desnity_aragonite: the density of the aragonite plug (g/cm^3)
+        - wound: This variable describes which of the three wounds the coral specimen received: "Large", "Small", or "No Wound"
+        - fish: This variable denotes whether the coral was housed with fish ("Fish") or without fish ("No Fish")
+        - density_stopper: The density of the calibrating object (g/cm^3) as calculated in (buoyant_weigth_analysis.Rmd)[https://github.com/haydenvega/fish_code/blob/main/buoyant_weight_analysis.Rmd]
+        - density_sw: The density of saltwater used when collecting the data (g/cm^3) as calculated in (buoyant_weigth_analysis.Rmd)[https://github.com/haydenvega/fish_code/blob/main/buoyant_weight_analysis.Rmd]
+        - dry_mass: The dry mass of the coral specimen as calculated in (buoyant_weigth_analysis.Rmd)[https://github.com/haydenvega/fish_code/blob/main/buoyant_weight_analysis.Rmd]
+        - coral_vol: The volume of the coral specimen as calculated in as calculated in (buoyant_weigth_analysis.Rmd)[https://github.com/haydenvega/fish_code/blob/main/buoyant_weight_analysis.Rmd]
+        - dry_mass_delta: The change in dry mass of the coral specimen from the beginning to the end of the experiment as calculated in (buoyant_weigth_analysis.Rmd)[https://github.com/haydenvega/fish_code/blob/main/buoyant_weight_analysis.Rmd]
+        - vol_delta: The change in volume of the coral specimen from the beginning to the end of the experiment as calculated in (buoyant_weigth_analysis.Rmd)[https://github.com/haydenvega/fish_code/blob/main/buoyant_weight_analysis.Rmd]
+
+pam_healed.csv contains photosynthetic efficiency data for recently healed tissue 
+    - Variables included are coral_id, f0, fm, fv_fm, wound, and fish
+      - coral_id: The numerical id of each unique coral specimen
+      - f0: The measurement of f0 for each coral specimen
+      - fm: fm for each coral specimen
+      - fv_fm: photosynthetic efficiency of each coral specimen (fv/fm)
+      - wound: This variable describes which of the three wounds the coral specimen received: "Large" or "Small"
+      - fish: This variable denotes whether the coral was housed with fish ("Fish") or without fish ("No Fish")
+
+pam_undisturbed_healed.csv contains photosynthetic efficiency data for corals, taken on undisturbed tissue
+    - Variables included are coral_id, f0, fm, fv_fm, wound, and fish
+      - coral_id: The numerical id of each unique coral specimen
+      - f0: The measurement of f0 for each coral specimen
+      - fm: fm for each coral specimen
+      - fv_fm: photosynthetic efficiency of each coral specimen (fv/fm)
+      - wound: This variable describes which of the three wounds the coral specimen received: "Large", "Small", or "None"
+      - fish: This variable denotes whether the coral was housed with fish ("Fish") or without fish ("No Fish")
+
+prelim_coral_heal_wsn.csv contains preliminary healing rate data processed for the 2024 WSN conference
+    - Variables include treatment, day, percent_healed, coral_id, and wound_size
+      - treatment: This variable denotes whether the coral was housed with fish ("fish") or without fish ("no_fish")
+      - day: This variables denotes the day which each measurement was taken (1-21)
+      - coral_id: The numerical id of each unique coral specimen
+      - wound_size: This variable describes which of the three wounds the coral specimen received: "large" or "small"
+
+skeletal.xlsx is the original copy of coral_delta.csv
+
