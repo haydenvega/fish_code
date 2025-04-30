@@ -3,7 +3,7 @@ title: "buoy_weight"
 author: "Hayden Vega"
 date: "2024-10-29"
 output: html_document
-description: An rmd with buoyant weight analysis of corals collected for the fish-regen project. Unclear whether or not this process is complete as of 4/25. 
+description: An rmd with buoyant weight analysis of corals collected for the fish-regen project. buoy_data is raw buoyant weight data, and coral_delta is the data for final-initial values for variables buoyant_weight_g, dry_mass, and . 
 ---
 
 ```{r}
@@ -15,8 +15,8 @@ library("here")
 ```
 
 ```{r}
-buoy_data <- read.csv("fish_regen_buoyantweight (1).csv")
-coral_delta <- read.csv("coral_delta.csv")
+buoy_data <- read.csv("../data/fish_regen_buoyantweight (1).csv")
+coral_delta <- read.csv("../data/coral_delta.csv")
 ```
 
 ```{r}
@@ -28,7 +28,18 @@ buoy_data%>%
 ```
 # graph buoyant data
 ```{r}
+log_data <- buoy_data %>% 
+  pivot_wider(names_from = date, values_from = bouyantweight_g, id_cols = coral_id) %>%
+  filter(coral_id != 45)
 
+log_data %>% 
+  ggplot(aes(initial, final))+
+  geom_point()
+
+0.991493 + .002019 * 2
+
+
+#This graph 
 skeletal.mass %>% 
   ggplot(aes(date, bouyantweight_g, color = fish, fill = wound))+
   geom_boxplot()
