@@ -1,0 +1,335 @@
+---
+title: "simulating wound data"
+format: html
+---
+
+```{r}
+# =============================================================================
+# Fish × Wound‐Size Category Interaction on Coral Wound Healing  
+# Full workflow with **manual** LRT comparisons and an extensively commented script:
+#   1. Load required packages  
+#   2. Simulate hypothetical data  
+#      a. Define design parameters  
+#      b. Specify true fixed‐effect coefficients  
+#      c. Simulate random effects  
+#      d. Draw predictor variables  
+#      e. Compute linear predictor and simulate binary outcome  
+#      f. Assemble into a tidy tibble  
+#   3. Fit GLMMs (full + reduced)  
+#   4. Perform manual LRT comparisons via anova(..., test="Chisq")  
+#   5. Extract coefficient estimates and LRT statistics, merge into one results tibble  
+#   6. Render a publication‐quality table of LRT χ², df, and p-values  
+#   7. Plot predicted probabilities from the full model  
+#
+# =============================================================================
+
+# ---- 1. Load Packages ----
+# We need several libraries for the tasks below:
+#   - tidyverse: data manipulation (dplyr, tibble) and plotting (ggplot2)
+#   - lme4: fitting GLMMs via glmer()
+#   - broom.mixed: extracting model outputs into tidy tibbles
+#   - ggeffects: generating model‐based predictions for plotting
+#   - ggpubr: clean, publication‐ready ggplot themes
+#   - knitr + kableExtra: rendering and styling tables in R Markdown
+#
+# If any of these packages is missing on your system, install them using:
+# install.packages(c("tidyverse","lme4","broom.mixed","ggeffects","ggpubr","knitr","kableExtra"))
+
+library(tidyverse)      # Core tidy data manipulation & ggplot2
+library(lme4)           # GLMM fitting with glmer()
+library(broom.mixed)    # tidy() method for mixed‐model objects
+library(ggeffects)      # ggpredict() for model‐based predictions
+library(ggpubr)         # theme_pubr() for cleaner ggplots
+library(knitr)          # kable() for table rendering
+library(kableExtra)     # Additional styling for kable() tables
+
+# ---- 2. Simulate Hypothetical Data ----
+# We build a synthetic dataset from first principles to ensure full transparency.
+# This simulation mimics an experiment where coral wound healing (binary) is
+# influenced by fish presence/absence, wound size category (small vs. large),
+# and random variation across tanks.
+
+set.seed(42)  # Set random seed for reproducibility: running this script later
+# will yield the same simulated data every time.
+
+# 2.1 Experimental design parameters
+#    We choose 12 tanks and 20 wounds per tank for a moderate sample size.
+n_tanks   <- 12                       # Number of tanks (random effect groups)
+per_tank  <- 20                       # Observations (wounds) per tank
+tank_ids  <- factor(rep(1:n_tanks,    # Create a factor vector of tank IDs
+                        each = per_tank))
+n_obs     <- length(tank_ids)         # Total observations = 12 * 20 = 240
+
+# 2.2 True fixed‐effect coefficients on the log‐odds scale
+#    These represent the underlying data‐generating process we assume.
+#    - beta0: intercept (baseline log‐odds of healing for fish absent & small wounds)
+#    - beta_f: main effect of fish presence (how much log‐odds shift when fish present)
+#    - beta_s: effect of wound_size_cat: baseline (small) = 0; large wounds reduce log‐odds by 1.0
+#    - beta_fs: interaction: how fish presence modifies each category’s log‐odds effect
+beta0   <-  0.5                      # Intercept: log‐odds of healing when fish absent & wound small
+beta_f  <-  1.0                      # Fish presence increases log‐odds by 1.0
+beta_s  <- c(small = 0, large = -1.0)# Small vs. large category effect
+beta_fs <- c(small = 0, large =  0.4)# Interaction: fish × wound_size_cat effect  #Hayden's Q: where do the exact values come from?
+
+# 2.3 Simulate random intercepts for each tank
+#    Random effects capture unobserved tank‐to‐tank variation in healing baseline.
+sigma_tank   <- 0.7                  # Standard deviation of tank random effects
+tank_effects <- rnorm(n_tanks, 0, sigma_tank)  
+#    Draw one random intercept per tank from a Normal(0, σ_tank)
+rand_int     <- tank_effects[as.numeric(tank_ids)]
+#    Map these tank‐specific intercept deviations to each observation
+
+# 2.4 Draw predictor variables
+#    We generate:
+#    - fish: binary factor (0 = absent, 1 = present) with equal probability
+#    - wound_size_cat: categorical factor “small” or “large”, each 50%
+fish           <- rbinom(n_obs, 1, 0.5)  # Generate 240 independent Bernoulli(0.5)
+wound_size_cat <- sample(c("small","large"), 
+                         size    = n_obs,
+                         replace = TRUE,
+                         prob    = c(0.5, 0.5))
+wound_size_cat <- factor(wound_size_cat, levels = c("small","large"))
+
+# 2.5 Compute the linear predictor η and simulate binary outcome
+#    The log‐odds (η) for each wound is:
+#      η_i = β0 #intercept
+#          + β_f * fish_i #fish effect
+#          + β_s[wound_size_cat_i] #wound effect
+#          + β_fs[wound_size_cat_i] * fish_i #interaction of wound and fish
+#          + random_intercept_tank_i #random effect
+eta    <- beta0 +
+  beta_f * fish +
+  beta_s[wound_size_cat] +
+  beta_fs[wound_size_cat] * fish +
+  rand_int
+
+#    Convert log‐odds to probability with inverse‐logit (plogis) and simulate the outcome.
+p_heal <- plogis(eta)               # p_i = exp(η_i) / (1 + exp(η_i))
+healed <- rbinom(n_obs, 1, p_heal)  # Simulate healing: 1 = healed, 0 = not healed
+
+# 2.6 Assemble the data into a tidy tibble
+#    Each column is clearly labeled for analysis.
+sim_df <- tibble(
+  tank           = tank_ids,            # Factor: random effect grouping
+  fish           = factor(fish,         # Convert numeric 0/1 to factor with labels
+                          levels = 0:1,
+                          labels = c("absent","present")),
+  wound_size_cat = wound_size_cat,      # Factor: small vs. large wound
+  healed         = healed               # Integer 0/1 response variable
+)
+
+# Print the first few rows to verify:
+head(sim_df)
+#      tank     fish wound_size_cat healed
+#   <fct>   <fct> <fct>            <int>
+# 1     1   absent small                0
+# 2     1   present large               1
+# ...
+
+# ---- 3. Fit the GLMMs ----
+# We fit four nested models to test:
+#   A) Interaction: full model vs. no interaction
+#   B) Fish main effect: no interaction vs. no fish
+#   C) Wound size effect: no interaction vs. no wound size
+#
+# Models:
+#   mod_full     : healed ~ fish * wound_size_cat + (1 | tank)
+#   mod_no_int   : healed ~ fish + wound_size_cat + (1 | tank)
+#   mod_no_fish  : healed ~ wound_size_cat + (1 | tank)
+#   mod_no_wound : healed ~ fish + (1 | tank)
+#
+# Each model is fit via glmer() with a logistic link and random intercept.
+
+# 3.1 Full model including interaction term
+mod_full <- glmer(
+  healed ~ fish * wound_size_cat + (1 | tank),
+  data    = sim_df,
+  family  = binomial(link = "logit"),   # logistic regression for binary data
+  control = glmerControl(optimizer = "bobyqa")
+)
+
+# 3.2 Reduced model without interaction (main effects only)
+mod_no_int <- glmer(
+  healed ~ fish + wound_size_cat + (1 | tank),
+  data    = sim_df,
+  family  = binomial(link = "logit"),
+  control = glmerControl(optimizer = "bobyqa")
+)
+
+# 3.3 Further reduced model without fish main effect
+mod_no_fish <- glmer(
+  healed ~ wound_size_cat + (1 | tank),
+  data    = sim_df,
+  family  = binomial(link = "logit"),
+  control = glmerControl(optimizer = "bobyqa")
+)
+
+# 3.4 Further reduced model without wound_size_cat main effect
+mod_no_wound <- glmer(
+  healed ~ fish + (1 | tank),
+  data    = sim_df,
+  family  = binomial(link = "logit"),
+  control = glmerControl(optimizer = "bobyqa")
+)
+
+# ---- 4. Manual LRT Comparisons ----
+# We compare nested models using anova(model_reduced, model_full, test="Chisq").
+# This performs a likelihood‐ratio test (LRT), providing:
+#   • Chisq   = 2 × (logLik_full − logLik_reduced)
+#   • Df      = difference in number of parameters
+#   • Pr(>Chisq) = p‐value for χ²(Df)
+#
+# A) Test for interaction: does adding the fish:wound_size_cat term improve fit?
+lrt_int <- anova(mod_no_int, mod_full, test = "Chisq")
+
+# B) Test for fish main effect: does adding fish improve fit?
+lrt_f   <- anova(mod_no_fish, mod_no_int, test = "Chisq")
+
+# C) Test for wound_size_cat main effect: does adding wound_size_cat improve fit?
+lrt_s   <- anova(mod_no_wound, mod_no_int, test = "Chisq")
+
+# Inspect the LRT outputs:
+# print(lrt_int)
+# print(lrt_f)
+# print(lrt_s)
+
+# ---- 5. Extract Coefficients & LRT Statistics ----
+
+# 5a. Extract fixed‐effect estimates from the full model:
+#     - term: coefficient name
+#     - estimate: log‐odds estimate
+#     - std.error: standard error
+coef_df <- tidy(mod_full, effects = "fixed") %>%
+  rename(
+    term     = term,
+    Estimate = estimate,
+    SE       = std.error
+  )
+
+# 5b. Compile the LRT statistics into a tibble for merging:
+#     We take the second row of each anova() result (the comparison) for Chisq, Df, and p-value.
+lrt_stats <- tribble(
+  ~test_term,          ~LR.chisq,       ~Df, ~p_LRT,
+  "Interaction",        lrt_int$Chisq[2], lrt_int$Df[2], lrt_int$`Pr(>Chisq)`[2],
+  "Fish effect",        lrt_f$Chisq[2],   lrt_f$Df[2],   lrt_f$`Pr(>Chisq)`[2],
+  "Wound size category",lrt_s$Chisq[2],   lrt_s$Df[2],   lrt_s$`Pr(>Chisq)`[2]
+)
+
+# 5c. Map each coefficient term to its corresponding LRT test label:
+#     - fishpresent → "Fish effect"
+#     - wound_size_catlarge → "Wound size category"
+#     - fishpresent:wound_size_catlarge → "Interaction"
+results_df <- coef_df %>%
+  mutate(
+    test_term = case_when(
+      term == "fishpresent"                            ~ "Fish effect",
+      term == "wound_size_catlarge"                    ~ "Wound size category",
+      term == "fishpresent:wound_size_catlarge"        ~ "Interaction",
+      TRUE                                             ~ NA_character_
+    )
+  ) %>%
+  # Join with LRT stats by matching on test_term
+  left_join(lrt_stats, by = "test_term") %>%
+  # We only keep rows where a test_term exists (drop the intercept)
+  filter(!is.na(test_term)) %>%
+  # Select and order the columns we want in the final table
+  select(term, Estimate, SE, LR.chisq, Df, p_LRT)
+
+# ---- 6. Render Publication‐Quality Table ----
+# Create a clean table displaying:
+#   • term: coefficient name
+#   • Estimate & SE: effect magnitude & precision on the log‐odds scale
+#   • LR.chisq, Df, p_LRT: results of the manual LRT comparisons
+results_df %>%
+  rename(
+    ChiSq = LR.chisq,
+    p     = p_LRT
+  ) %>%
+  kable(
+    caption = "Table 1. GLMM Fixed Effects and Manual LRT χ² Tests",
+    digits  = c(NA, 2, 2, 2, 0, 3)
+  ) %>%
+  kable_styling(full_width = FALSE, position = "center")
+
+# ---- 7. Plot Predicted Healing Probabilities ----
+# Use ggeffects::ggpredict() to compute predicted probabilities (with 95% CI)
+# for each combination of wound_size_cat and fish treatment.
+pred_df <- ggpredict(mod_full, terms = c("wound_size_cat", "fish"))
+
+# Plot with ggplot2:
+#   - Points for predicted means
+#   - Lines connecting the categories
+#   - Error bars for 95% confidence intervals
+ggplot(pred_df, aes(x = x, y = predicted, group = group,
+                    color = group, fill = group)) +
+  geom_point(size = 3) +
+  geom_line(size = 1) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
+                width = 0.2, alpha = 0.5) +
+  labs(
+    title = "Figure 1. Predicted Probability of Coral Wound Healing",
+    x     = "Wound Size Category",
+    y     = "Predicted Probability of Healing",
+    color = "Fish Treatment",
+    fill  = "Fish Treatment"
+  ) +
+  theme_pubr(base_size = 14) +
+  theme(legend.position = "top")
+
+
+# =============================================================================
+# End of script.
+#
+#
+# - **Why simulate?** By generating our own data, we know the true underlying
+#   model and can verify that our analysis recovers those parameters.
+#
+# - **Design**: We have 12 tanks to introduce random‐effect structure, which
+#   captures unobserved heterogeneity (e.g., slight differences in tank
+#   conditions). Each tank has 20 observations to give us moderate power.
+#
+# - **Fixed‐effect coefficients**:
+#   • β0 = 0.5 means, on the log‐odds scale, a coral in a small wound category
+#     in the absence of fish has log‐odds = 0.5 → probability ≈ 0.62.
+#   • β_f = 1.0 means fish presence increases log‐odds by 1.0 (odds × e¹ ≈2.7×).
+#   • β_s (large = -1.0) means large wounds have lower healing odds than small:
+#     log‐odds shift by -1.0 → odds × e⁻¹ ≈0.37×.
+#   • β_fs (large, fish interaction = +0.4) means when fish are present, the
+#     penalty for large wounds is less severe (−1.0 + 0.4 = -0.6 net effect).
+#
+# - **Random intercepts**: drawn from N(0, σ²=0.49). This spreads the baseline
+#   healing probability across tanks, ensuring observations within a tank are
+#   correlated.
+#
+# - **GLMM**: `glmer()` fits a logistic mixed model. We use `bobyqa` optimizer
+#   for stability because sometimes defaults struggle with complex models.
+#
+# - **Model hierarchy**:
+#    1. Full model: fish × wound_size_cat interaction + main effects.
+#    2. No interaction: only main effects.
+#    3. No fish: only wound_size_cat.
+#    4. No wound: only fish.
+#   This hierarchy respects the principle that you test interactions before
+#   removing main effects.
+#
+# - **LRTs (anova with test="Chisq")**:
+#   • Compares log‐likelihoods of two nested models.
+#   • Provides χ² statistic = 2 × Δ logLik.
+#   • p‐value from χ² distribution with Δdf degrees of freedom.
+#
+# - **Results table**: we focus on LRT χ², df, and p, dropping the Wald z
+#   for clarity—LRT is our primary inferential tool here.
+#
+# - **Visualization**: `ggpredict()` helps us get predicted probabilities and CIs
+#   for categorical predictors. The final plot shows how healing probability
+#   differs by wound size and fish treatment in an intuitive way.
+#
+# Students are encouraged to tweak:
+#   • Number of tanks (`n_tanks`) → affects random‐effect precision.
+#   • Observations per tank (`per_tank`) → affects overall power.
+#   • Effect sizes (`beta0`, `beta_f`, `beta_s`, `beta_fs`) → to see when
+#     effects become too small to detect.
+#   • Interaction structure → e.g., simulate different interactions.
+# =============================================================================
+```
+
