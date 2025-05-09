@@ -3,20 +3,21 @@ title: "buoy_weight"
 author: "Hayden Vega"
 date: "2024-10-29"
 output: html_document
-description: An rmd with buoyant weight analysis of corals collected for the fish-regen project. buoy_data is raw buoyant weight data, and coral_delta is the data for final-initial values for variables buoyant_weight_g, dry_mass, and . 
+description: An rmd with buoyant weight analysis of corals collected for the fish-regen project. buoy_data is raw buoyant weight data, and coral_delta is the data for final-initial values for variables buoyant_weight_g, dry_mass, and volume. 
 ---
-
+### Setup
 ```{r}
 library("tidyverse")
 library("readxl")
 library("janitor")
 library('readxl')
 library("here")
+library("ggplot2")
 ```
 
 ```{r}
-buoy_data <- read.csv("../data/fish_regen_buoyantweight (1).csv")
-coral_delta <- read.csv("../data/coral_delta.csv")
+buoy_data <- read.csv(here("data", "fish_regen_buoyantweight (1).csv"))
+coral_delta <- read.csv(here("data", "coral_delta.csv"))
 ```
 
 ```{r}
@@ -26,12 +27,185 @@ buoy_data%>%
   mutate(dry_mass = bouyantweight_g / (1 - (density_sw/density_aragonite)))%>%
   mutate(coral_vol = (dry_mass / (density_aragonite - density_sw))) -> skeletal.mass 
 ```
-# graph buoyant data
-```{r}
-log_data <- buoy_data %>% 
-  pivot_wider(names_from = date, values_from = bouyantweight_g, id_cols = coral_id) %>%
-  filter(coral_id != 45)
+# Allometric linear models
 
+This section contains code for allometric linear models. 
+
+
+```{r}
+     #                        Data Wrangling                       ~~~
+     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#Filter data to exclude erroneous outlier (coral 45) and extranneous columns. Pivot to create columns for initial and final buoyant weight. 
+log_data <- buoy_data %>%
+  filter(coral_id != 45) %>%   #remove 45
+  select(coral_id, date, bouyantweight_g, wound, fish) %>%  # keep only relevant columns
+  pivot_wider(names_from = date, values_from = bouyantweight_g) %>% #initial and final to columns, values from buoyantweight
+  rename(
+    initial_weight = initial, #renaming for clarity
+    final_weight = final
+  ) %>% 
+  mutate(delta_mass = final_weight - initial_weight) #calculating delta
+
+# Filter data for unwounded corals and no fish treatment 
+log_df <- log_data %>%
+  #filter(wound == "No Wound", fish == "No Fish") %>%
+  mutate(
+    log_i_weight = log(initial_weight),
+    log_f_weight = log(final_weight)
+  )
+#...............................................................................
+#                                                                              .
+#  Should we log only the "no wound, no fish" corals?                           .
+#                                                                              .
+#...............................................................................
+
+b_values_df <- log_df %>%
+  #group_by(coral_id) %>% #fish treatment specific
+  do({
+    model <- lm(log_f_weight ~ log_i_weight, data = .)
+    tidy_model <- broom::tidy(model, conf.int = TRUE)
+    intercept_row <- tidy_model[1, ]
+    slope_row <- tidy_model[2, ]
+    tibble(
+      intercept = intercept_row$estimate,
+      intercept_conf.low = intercept_row$conf.low,
+      intercept_conf.high = intercept_row$conf.high,
+      b_value = slope_row$estimate,
+      b_conf.low = slope_row$conf.low,
+      b_conf.high = slope_row$conf.high
+    )
+  })
+
+log_df <- log_df %>%
+  cross_join(b_values_df)
+
+log_df %>%
+  ggplot(aes(x = log_i_weight, y = log_f_weight)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_abline(aes(intercept = intercept, slope = b_value), color = "darkred", size = 1) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey50") +
+  labs(
+    title = "Allometric Scaling",
+    x = "Log Initial Weight",
+    y = "Log Final Weight"
+  ) +
+  theme_bw(base_size = 14)
+
+```
+
+## Linear model of growth ratio as a function of wound and fish treatments
+
+```{r}
+#Note, no tank random effect because it's not in the data. RUH ROH
+log_df <- log_df %>%
+  mutate(growth_ratio = final_weight / initial_weight)
+
+growth_lm_interaction <- lm(growth_ratio~fish * wound , data = log_df )
+summary(growth_lm_interaction)
+anova(growth_lm_interaction, test = "Chisq")
+
+
+growth_lm_no_int <- lm(growth_ratio~ fish + wound , data = log_df)
+anova(growth_lm_no_int, test = "Chisq")
+
+
+growth_no_wound <- lm(growth_ratio ~ fish , data = log_df)
+anova(growth_no_wound, test = "Chisq")
+
+growth_no_fish <- lm(growth_ratio~wound , data = log_df)
+anova(growth_no_fish, test = "Chisq")
+
+#...............................................................................
+#                                                                              .
+#  It seems that neither fish nor wounding has a significant effect on growth  .
+#                                                                              .
+#...............................................................................
+
+
+```
+### Quantifying the best fitting model formula
+
+This section contains my poor attempt to try and use the framework in simulating_wound_data.qmd to view how well the differing formulas fit the trends.
+My graph currently yields a big old blank. 
+```{r}
+lrt_int <- anova(growth_lm_no_int, growth_lm_interaction, test = "Chisq")
+
+# B) Test for fish main effect: does adding fish improve fit?
+lrt_f   <- anova(growth_no_fish, growth_lm_no_int, test = "Chisq")
+
+# C) Test for wound_size_cat main effect: does adding wound_size_cat improve fit?
+lrt_s   <- anova(growth_no_wound, growth_lm_no_int, test = "Chisq")
+
+
+coef_df <- tidy(growth_lm_interaction, effects = "fixed") %>%
+  rename(
+    term     = term,
+    Estimate = estimate,
+    SE       = std.error
+  )
+
+lrt_stats <- tribble(
+  ~test_term,          ~LR.chisq,       ~Df, ~p_LRT,
+  "Interaction",        lrt_int$Chisq[2], lrt_int$Df[2], lrt_int$`Pr(>Chisq)`[2],
+  "Fish effect",        lrt_f$Chisq[2],   lrt_f$Df[2],   lrt_f$`Pr(>Chisq)`[2],
+  "Wound size category",lrt_s$Chisq[2],   lrt_s$Df[2],   lrt_s$`Pr(>Chisq)`[2]
+)
+
+# 5c. Map each coefficient term to its corresponding LRT test label:
+#     - fishpresent → "Fish effect"
+#     - wound_size_catlarge → "Wound size category"
+#     - fishpresent:wound_size_catlarge → "Interaction"
+results_df <- coef_df %>%
+  mutate(
+    test_term = case_when(
+      term == "fishNo Fish"                            ~ "Fish effect",
+      term == "woundSmall"                    ~ "Wound size category",
+      term == "fishNo Fish:woundSmall"        ~ "Interaction",
+      TRUE                                             ~ NA_character_
+    )
+  ) %>%
+  # Join with LRT stats by matching on test_term
+  left_join(lrt_stats, by = "test_term") %>%
+  # We only keep rows where a test_term exists (drop the intercept)
+  filter(!is.na(test_term)) %>%
+  # Select and order the columns we want in the final table
+  select(term, Estimate, SE, LR.chisq, Df, p_LRT)
+
+results_df %>%
+  rename(
+    ChiSq = LR.chisq,
+    p     = p_LRT
+  ) %>%
+  kable(
+    caption = "Table 1. GLMM Fixed Effects and Manual LRT χ² Tests",
+    digits  = c(NA, 2, 2, 2, 0, 3)
+  ) %>%
+  kable_styling(full_width = FALSE, position = "center")
+
+#  select(species, summary) %>%
+ # unnest(summary)
+```
+
+
+```{r}
+
+
+log_data <- buoy_data %>%
+  filter(coral_id != 45) %>%
+  pivot_wider(
+    id_cols = coral_id,
+    names_from = date,
+    values_from = bouyantweight_g
+  )
+
+# Filter data for unwounded corals and no fish treatment
+allometry_df <- df %>%
+  filter(wound_raw == "not wounded", treatment == "no fish") %>%
+  mutate(
+    log_i_weight = log(i.weight),
+    log_f_weight = log(f.weight)
+  )
 log_data %>% 
   ggplot(aes(initial, final))+
   geom_point()
@@ -43,8 +217,9 @@ log_data %>%
 skeletal.mass %>% 
   ggplot(aes(date, bouyantweight_g, color = fish, fill = wound))+
   geom_boxplot()
-
 ```
+
+
 #graph change of drymass and volume
 ```{r fig.width = 5, fig.height = 5}
 
