@@ -6,21 +6,29 @@ output: html_document
 description: An rmd with buoyant weight analysis of corals collected for the fish-regen project. buoy_data is raw buoyant weight data, and coral_delta is the data for final-initial values for variables buoyant_weight_g, dry_mass, and volume. 
 ---
 ### Setup
-```{r}
-library("tidyverse")
-library("readxl")
-library("janitor")
-library('readxl')
-library("here")
-library("ggplot2")
+```{r, results = 'hide', message=FALSE, warning=FALSE}
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(here)
+library(ggplot2)
+library(broom)
+library(ggpubr)
+library(lme4)
+library(lmerTest)
+library(car)
+library(emmeans)
+library(broom.mixed)
+library(knitr)          # kable() for table rendering
+library(kableExtra)
 ```
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 buoy_data <- read.csv(here("data", "fish_regen_buoyantweight (1).csv"))
 coral_delta <- read.csv(here("data", "coral_delta.csv"))
 ```
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 buoy_data%>% 
   mutate(density_stopper = (air_weight_g * 0.9965)/(air_weight_g - fresh_weight_g))%>%
   mutate(density_sw = (air_weight_g - salt_weight_g)/ (air_weight_g / density_stopper))%>%
@@ -31,8 +39,10 @@ buoy_data%>%
 
 This section contains code for allometric linear models. 
 
+My big question is am I on the right track here? Or are there transformations that I am missing? Also is lm the correct model to run? Should we incorporate other variables into our models?
 
-```{r}
+
+```{r, message=FALSE, warning=FALSE}
      #                        Data Wrangling                       ~~~
      #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -96,7 +106,7 @@ log_df %>%
 
 ## Linear model of growth ratio as a function of wound and fish treatments
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 #Note, no tank random effect because it's not in the data. RUH ROH
 log_df <- log_df %>%
   mutate(growth_ratio = final_weight / initial_weight)
@@ -128,6 +138,8 @@ anova(growth_no_fish, test = "Chisq")
 
 This section contains my poor attempt to try and use the framework in simulating_wound_data.qmd to view how well the differing formulas fit the trends.
 My graph currently yields a big old blank. 
+
+This part was for giggles, so I have a lot of questions; the most important being: is this even useful? Could we just use AIC to test for best fitting models or the anova outputs? My code doesn't work, and I think it's because it doesn't fit with what our goals are for these growth data. Is validating the fit beyond the anova outputs necessary?
 ```{r}
 lrt_int <- anova(growth_lm_no_int, growth_lm_interaction, test = "Chisq")
 
@@ -188,35 +200,37 @@ results_df %>%
 ```
 
 
+
+## OLD CODE - ignore
 ```{r}
 
 
-log_data <- buoy_data %>%
-  filter(coral_id != 45) %>%
-  pivot_wider(
-    id_cols = coral_id,
-    names_from = date,
-    values_from = bouyantweight_g
-  )
-
-# Filter data for unwounded corals and no fish treatment
-allometry_df <- df %>%
-  filter(wound_raw == "not wounded", treatment == "no fish") %>%
-  mutate(
-    log_i_weight = log(i.weight),
-    log_f_weight = log(f.weight)
-  )
-log_data %>% 
-  ggplot(aes(initial, final))+
-  geom_point()
-
-0.991493 + .002019 * 2
-
-
-#This graph 
-skeletal.mass %>% 
-  ggplot(aes(date, bouyantweight_g, color = fish, fill = wound))+
-  geom_boxplot()
+# log_data <- buoy_data %>%
+#   filter(coral_id != 45) %>%
+#   pivot_wider(
+#     id_cols = coral_id,
+#     names_from = date,
+#     values_from = bouyantweight_g
+#   )
+# 
+# # Filter data for unwounded corals and no fish treatment
+# allometry_df <- df %>%
+#   filter(wound_raw == "not wounded", treatment == "no fish") %>%
+#   mutate(
+#     log_i_weight = log(i.weight),
+#     log_f_weight = log(f.weight)
+#   )
+# log_data %>% 
+#   ggplot(aes(initial, final))+
+#   geom_point()
+# 
+# 0.991493 + .002019 * 2
+# 
+# 
+# #This graph 
+# skeletal.mass %>% 
+#   ggplot(aes(date, bouyantweight_g, color = fish, fill = wound))+
+#   geom_boxplot()
 ```
 
 
@@ -231,9 +245,9 @@ coral_delta %>%
 ```
 
 ```{r}
-coral_delta %>% 
-  ggplot(aes(fish, vol_delta, color = wound))+
-  geom_boxplot()+
-  coord_cartesian(ylim = c(0, 2))
+# coral_delta %>% 
+#   ggplot(aes(fish, vol_delta, color = wound))+
+#   geom_boxplot()+
+#   coord_cartesian(ylim = c(0, 2))
 ```
 
