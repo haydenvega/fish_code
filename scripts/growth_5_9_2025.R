@@ -130,7 +130,7 @@ ggsave(
   height = 6,
   dpi = 300
 )
-#ask if there are difference statistically 
+#ask if there are difference statistically THIS IS SMART
 
 # Fit linear model with interaction
 model_lm <- lm(initial_weight ~ wound * tank, data = bw_plot)
@@ -138,7 +138,7 @@ model_lm <- lm(initial_weight ~ wound * tank, data = bw_plot)
 # ANOVA table
 anova(model_lm)
 
-#no so we move forward with our analysis looking at alloometry next 
+#no so we move forward with our analysis looking at allooometry next 
 
 # ===============================
 # 3. Transform Data for Allometric Modeling
@@ -271,7 +271,7 @@ growth_stats <- bw_merged %>%
     wound = factor(wound, levels = c("No Wound", "Small", "Large")),
     fish = factor(fish),
     tank = factor(tank),
-    growth_scaled = (final_weight - initial_weight) / (initial_weight ^ b_est)
+    growth_scaled = (final_weight - initial_weight) / (initial_weight ^ b_est) #why this equation?
   )
 
 # --- Step 2: Fit Mixed-Effects Models ---
@@ -340,7 +340,7 @@ lrt_table %>%
   )
 
 
-#so with no interaction the final model is going to be just the main effects 
+#so with no interaction the final model is going to be just the main effects #How do we determine this?
 
 
 # ===============================
