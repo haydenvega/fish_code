@@ -34,6 +34,8 @@ library(janitor)
 library(here)
 library(gt)
 library(broom.mixed)
+library(ggpubr)
+library(lme4)
 
 # ===============================
 # 2. Load Buoyant Weight Data
@@ -57,8 +59,22 @@ bw_wide <- left_join(bw_initial, bw_final, by = "coral_id") %>%
   mutate(
     delta_mass = final_weight - initial_weight,
     coral_id = as.character(coral_id)
-  )
+  ) 
 
+
+  #.....................Load Surface Area Data.....................ADRIAN LOOK HERE!
+sa <- read_csv(here("data", "fish_regen_mastersheet_wound closure_necrosis_sa - mastersheet.csv")) %>% 
+  clean_names() %>% 
+  mutate(coral_id = as.character(coral_id)) %>% 
+  select(-fish, -wound, -date_collected, -date_fragment)
+
+bw_sa_wide <- left_join(bw_wide, sa, by = "coral_id") %>% 
+  mutate(
+    wound = factor(wound, levels = c("No Wound", "Small", "Large")),
+    tank = as.factor(tank)
+  ) %>% 
+  mutate(tank = factor(tank, levels = sort(unique(as.numeric(as.character(tank))))))
+  
 # ===============================
 # 3. Load Tank Metadata
 # ===============================
@@ -139,6 +155,16 @@ model_lm <- lm(initial_weight ~ wound * tank, data = bw_plot)
 anova(model_lm)
 
 #no so we move forward with our analysis looking at allooometry next 
+
+#...................test for differences in SA...................ADRIAN LOOK HERE!
+
+model_sa <- lm(sa_cal ~ wound * tank, data = bw_sa_wide)
+
+anova(model_sa)
+
+bw_plot <- bw_merged %>%
+  mutate(tank = factor(tank, levels = sort(unique(as.numeric(as.character(tank))))))
+#No significant differences
 
 # ===============================
 # 3. Transform Data for Allometric Modeling
@@ -258,6 +284,38 @@ ggsave(
   dpi = 300
 )
 
+#..................Visualizing SA by Inital Mass and Treatment...................ADRIAN LOOK HERE!
+
+# Prep data: drop NAs, ensure proper factor levels
+bw_sa_df <- bw_sa_wide %>%
+  drop_na(initial_weight, final_weight, wound) %>%
+  filter(coral_id != 103)
+  mutate(
+    delta_mass = final_weight - initial_weight,
+    wound = factor(wound, levels = c("No Wound", "Small", "Large"))
+  )
+
+# Plot: SA vs. Initial Mass, colored by Wound Treatment
+ggplot(bw_sa_df, aes(x = initial_weight, y = sa_cal, color = wound)) +
+  geom_point(size = 2.2, alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 1.1) +
+  scale_color_brewer(palette = "Dark2") +
+  labs(
+    title = "Coral Surface Area as a Function of Initial Mass",
+    subtitle = "Colored by Wound Treatment",
+    x = "Initial Buoyant Weight (g)",
+    y = "Surface Area (cm^2)",
+    color = "Wound Treatment"
+  ) +
+  theme_pubr(base_size = 14)
+
+ggsave(
+  here("figures", "sa_vs_initial_mass.png"),
+  width = 8,
+  height = 6,
+  dpi = 300
+)
+
 # ===============================
 # 6. Statistical Analysis of Allometrically Scaled Growth
 # ===============================
@@ -339,8 +397,84 @@ lrt_table %>%
     heading.subtitle.font.size = 13
   )
 
+#..........Statistical Analysis of Growth/SA/Time Metric.........ADRIAN LOOK HERE!
 
-#so with no interaction the final model is going to be just the main effects #How do we determine this?
+
+bw_sa_stats <- bw_sa_df %>%
+  drop_na(initial_weight, final_weight, fish, wound, tank) %>%
+  mutate(
+    wound = factor(wound, levels = c("No Wound", "Small", "Large")),
+    fish = factor(fish),
+    tank = factor(tank),
+    bw_sa_time = (final_weight - initial_weight) / (sa_cal * 21) 
+  )
+
+# --- Step 2: Fit Mixed-Effects Models ---
+
+# Full model with interaction
+mod_int_sa <- lmer(bw_sa_time ~ fish * wound + (1 | tank), data = bw_sa_stats)
+
+# Additive model without interaction
+mod_add_sa <- lmer(bw_sa_time ~ fish + wound + (1 | tank), data = bw_sa_stats)
+
+# Fish-only model
+mod_fish_sa <- lmer(bw_sa_time ~ fish + (1 | tank), data = bw_sa_stats)
+
+# Wound-only model
+mod_wound_sa <- lmer(bw_sa_time ~ wound + (1 | tank), data = bw_sa_stats)
+
+# Null model (intercept + tank)
+mod_null_sa <- lmer(bw_sa_time ~ 1 + (1 | tank), data = bw_sa_stats)
+
+# --- Step 3: Likelihood Ratio Tests ---
+lrt_interaction_sa <- anova(mod_add_sa, mod_int_sa, test = "Chisq")
+lrt_fish_sa <- anova(mod_wound_sa, mod_add_sa, test = "Chisq")
+lrt_wound_sa <- anova(mod_fish_sa, mod_add_sa, test = "Chisq")
+
+# --- Step 4: Summarize Results in a Table ---
+
+
+lrt_table <- tibble(
+  Test = c("Interaction (Fish × Wound)", "Fish Effect", "Wound Effect"),
+  ChiSq = c(
+    lrt_interaction_sa$Chisq[2],
+    lrt_fish_sa$Chisq[2],
+    lrt_wound_sa$Chisq[2]
+  ),
+  Df = c(
+    lrt_interaction_sa$Df[2],
+    lrt_fish_sa$Df[2],
+    lrt_wound_sa$Df[2]
+  ),
+  p_value = c(
+    lrt_interaction_sa$`Pr(>Chisq)`[2],
+    lrt_fish_sa$`Pr(>Chisq)`[2],
+    lrt_wound_sa$`Pr(>Chisq)`[2]
+  )
+) %>%
+  mutate(across(where(is.numeric), round, 3))
+
+# Format with gt
+lrt_table %>%
+  gt() %>%
+  tab_header(
+    title = "Table 2. Likelihood Ratio Tests for Effects on Coral Growth as a function of Surface Area and Time",
+    subtitle = paste("Scaled growth:", expression((final - initial)/(surface_area * 21)))
+  ) %>%
+  cols_label(
+    Test = "Model Comparison",
+    ChiSq = "Chi-squared",
+    Df = "Degrees of Freedom",
+    p_value = "P-value"
+  ) %>%
+  fmt_number(columns = vars(ChiSq, p_value), decimals = 3) %>%
+  tab_options(
+    table.font.size = 14,
+    heading.title.font.size = 16,
+    heading.subtitle.font.size = 13
+  )
+
+#so with no interaction the final model is going to be just the main effects 
 
 
 # ===============================
@@ -385,6 +519,53 @@ ggplot(growth_stats, aes(x = fish, y = growth_scaled, fill = fish)) +
 
 ggsave(
   here("figures", "scaled_growth_by_treatment.png"),
+  width = 8,
+  height = 6,
+  dpi = 300
+)
+
+# Visualizing Growth, SA, Time Metric Across Treatments (facet by wound) ~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ADRIAN LOOK HERE!
+
+
+# Ensure fish levels are ordered correctly
+bw_sa_stats_viz <- bw_sa_stats %>%
+  mutate(fish = factor(fish, levels = c("No Fish", "Fish")))
+
+# Plot: Scaled growth by Fish, faceted by Wound
+ggplot(bw_sa_stats_viz, aes(x = fish, y = bw_sa_time, fill = fish)) +
+  geom_boxplot(
+    alpha = 0.5,
+    width = 0.6,
+    outlier.shape = NA,
+    color = "black"
+  ) +
+  geom_jitter(
+    aes(color = fish),
+    width = 0.15,
+    size = 2,
+    alpha = 0.6
+  ) +
+  facet_wrap(~wound) +
+  scale_fill_brewer(palette = "Dark2") +
+  scale_color_brewer(palette = "Dark2") +
+  labs(
+    # title = "Coral Growth as a Function of SA and Time by Treatment",
+    # subtitle = expression(paste("Growth normalized by ", initial^b, ", grouped by Fish Treatment")),
+    x = "Fish Treatment",
+    y = expression((Final - Initial) / (Surface_Area * Time)),
+    fill = "Fish",
+    color = "Fish"
+  ) +
+  theme_pubr(base_size = 14) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
+    legend.position = "top"
+  )
+
+ggsave(
+  here("figures", "growth_sa_time_by_treatment.png"),
   width = 8,
   height = 6,
   dpi = 300
