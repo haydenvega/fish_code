@@ -62,11 +62,15 @@ bw_wide <- left_join(bw_initial, bw_final, by = "coral_id") %>%
   ) 
 
 
+
   #.....................Load Surface Area Data.....................ADRIAN LOOK HERE!
 sa <- read_csv(here("data", "fish_regen_mastersheet_wound closure_necrosis_sa - mastersheet.csv")) %>% 
   clean_names() %>% 
   mutate(coral_id = as.character(coral_id)) %>% 
-  select(-fish, -wound, -date_collected, -date_fragment)
+  select(-fish, -date_collected, -date_fragment) %>% 
+  mutate(sa_col=ifelse(wound == "Large", sa_cal - 3, #removing 3 cm^2 from large wounds and 1 from small
+                       ifelse(wound == "Small", sa_cal - 1, sa_cal))) %>% 
+  select(-wound) #removing the column so it doesn't duplicate when we join with bw_wide
 
 bw_sa_wide <- left_join(bw_wide, sa, by = "coral_id") %>% 
   mutate(
@@ -289,7 +293,7 @@ ggsave(
 # Prep data: drop NAs, ensure proper factor levels
 bw_sa_df <- bw_sa_wide %>%
   drop_na(initial_weight, final_weight, wound) %>%
-  filter(coral_id != 103)
+  filter(coral_id != 103) %>% 
   mutate(
     delta_mass = final_weight - initial_weight,
     wound = factor(wound, levels = c("No Wound", "Small", "Large"))
