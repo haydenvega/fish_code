@@ -22,19 +22,178 @@ library(DHARMa)
 library(parameters)
 library(effects)
 library(MuMIn)
+library(here)
+library(tidyverse)
+library(gt)
+library(broom.mixed)
+library(ggpubr)
 ```
 
-## Load in Data
+# Setup
+```{r}
+#............................packages............................
+library(janitor)
+library(tidyverse)
+library(viridis)
+library(lme4)
+library(ggeffects)
+library(sjlabelled)
+library(DHARMa)
+library(parameters)
+library(effects)
+library(MuMIn)
+library(here)
+library(tidyverse)
+library(gt)
+library(broom.mixed)
+library(ggpubr)
+
+#..........................loading data..........................
+pam_healed <- read.csv(here("data", "pam_healed.csv"))
+
+pam_undisturbed_healed <- read.csv(here("data", "pam_undisturbed_healed.csv"))
+
+#.......................loading aesthetics.......................
+wound_palette <- c("Large" = "#ffbf00", 
+                   "Small" = "#be8333")
+fish_palette <- c("Fish" = "#2b4b52", 
+                  "No Fish" = "#ad301a")
+
+```
+
+
+## Visualizing Fv/Fm by wound and fish presence
+
+### Fv_Fm as a function of fish presence--colored by wound
+```{r}
+ggplot(pam_healed, aes(x = fish, y = fv_fm, fill = wound)) +
+  geom_boxplot() +
+  #geom_smooth(method = "lm", se = FALSE, linewidth = 1.1) +
+  scale_fill_manual(values = wound_palette) +
+  labs(
+    title = "Coral Photosynthetic Efficiency as a Function of Fish Presence",
+    subtitle = "Colored by Wound Treatment",
+    x = "Fish Presence",
+    y = "Photosynthetic Efficiency (fv/fm)",
+    color = "Wound Treatment"
+  ) +
+  theme_pubr(base_size = 14)+
+  theme(
+    plot.title = element_text(hjust = 1), 
+    plot.subtitle = element_text(hjust= -0.05)
+  )
+
+ggsave(
+  here("figures", "photoeff_vs_fish.png"),
+  width = 8,
+  height = 6,
+  dpi = 300
+)
+```
+
+### Fv_Fm as a function of wound presence--colored by fish presence
+```{r}
+ggplot(pam_healed, aes(x = wound, y = fv_fm, fill = fish)) +
+  geom_boxplot() +
+  #geom_smooth(method = "lm", se = FALSE, linewidth = 1.1) +
+  scale_fill_manual(values = fish_palette) +
+  labs(
+    title = "Coral Photosynthetic Efficiency as a Function of Wound Size",
+    subtitle = "Colored by Fish Presence",
+    x = "Wound Size",
+    y = "Photosynthetic Efficiency (fv/fm)",
+    color = "Fish Presence"
+  ) +
+  theme_pubr(base_size = 14)
+
+ggsave(
+  here("figures", "photoeff_vs_wound.png"),
+  width = 8,
+  height = 6,
+  dpi = 300
+)
+
+#Based on both graphs above, I think there may be a significant interaction between large wounds and fish presence.
+```
+
+## Linear Models and Anova for Fv/Fm
+### Fitting Mixed Effect Models
 ```{r}
 
-pam_healed <- read.csv("pam_healed.csv", header = TRUE, sep = ",")
+# Full Model OH YEAH
+mod_int <- lmer(fv_fm ~ fish * wound + (1 | tank), data = pam_healed)
 
-pam_undisturbed_healed <- read.csv("pam_undisturbed_healed.csv", header = TRUE, sep = ",")
+summary(mod_int)
+
+# Additive model without interaction
+mod_add <- lmer(fv_fm ~ fish + wound + (1 | tank), data = pam_healed)
+
+# Fish-only model
+mod_fish <- lmer(fv_fm ~ fish + (1 | tank), data = pam_healed)
+
+# Wound-only model
+mod_wound <- lmer(fv_fm ~ wound + (1 | tank), data = pam_healed)
+
+# Null model (intercept + tank)
+mod_null <- lmer(fv_fm ~ 1 + (1 | tank), data = pam_healed)
 
 ```
 
+### Likelihood tests
+```{r}
+lrt_interaction <- anova(mod_add, mod_int, test = "Chisq")
+lrt_fish <- anova(mod_wound, mod_add, test = "Chisq")
+lrt_wound <- anova(mod_fish, mod_add, test = "Chisq")
+```
 
-## Boxplot of Pam for undisturbed tissue
+### Summarize results in a table
+```{r}
+lrt_table <- tibble(
+  Test = c("Interaction (Fish × Wound)", "Fish Effect", "Wound Effect"),
+  ChiSq = c(
+    lrt_interaction$Chisq[2],
+    lrt_fish$Chisq[2],
+    lrt_wound$Chisq[2]
+  ),
+  Df = c(
+    lrt_interaction$Df[2],
+    lrt_fish$Df[2],
+    lrt_wound$Df[2]
+  ),
+  p_value = c(
+    lrt_interaction$`Pr(>Chisq)`[2],
+    lrt_fish$`Pr(>Chisq)`[2],
+    lrt_wound$`Pr(>Chisq)`[2]
+  )
+) %>%
+  mutate(across(where(is.numeric), round, 3))
+
+# Format with gt
+lrt_table %>%
+  gt() %>%
+  tab_header(
+    title = "Table #. Likelihood Ratio Tests for Effects on fv/fm",
+    #subtitle = paste("Scaled growth:", expression((final - initial)/initial^b))
+  ) %>%
+  cols_label(
+    Test = "Model Comparison",
+    ChiSq = "Chi-squared",
+    Df = "Degrees of Freedom",
+    p_value = "P-value"
+  ) %>%
+  fmt_number(columns = vars(ChiSq, p_value), decimals = 3) %>%
+  tab_options(
+    table.font.size = 14,
+    heading.title.font.size = 16,
+    heading.subtitle.font.size = 13
+  )
+
+#THIS is so satisying! HAHAHAHAAH
+```
+
+# Old Code
+
+### Boxplot of Pam for undisturbed tissue
 ```{r}
 
 
@@ -64,7 +223,7 @@ pam_undisturbed_healed %>%
 ```
 
 
-## Boxplot of PAM for healed tissue
+### Boxplot of PAM for healed tissue
 ```{r}
 pam_healed %>% 
   ggplot(aes (x = fish, y = fv_fm, fill = fish)) +
@@ -94,7 +253,7 @@ pam_healed %>%
 ```
 
 
-#Multiple Regression
+### Multiple Regression
 
 ```{r}
 pam_all_regression <- lmer(fv_fm ~ wound + fish + (1 | f0), data = pam_undisturbed_healed)
@@ -106,7 +265,7 @@ summary(pam_healed_regression)
 anova(pam_healed_regression)
 ```
 
-#Anova
+### Anova
 ```{r}
 pam_all_anova <- aov(fv_fm ~ wound * fish, data = pam_undisturbed_healed)
 
@@ -114,7 +273,7 @@ summary(pam_all_anova)
 
 pam_healed_anova <- aov(fv_fm ~ wound * fish, data = pam_healed)
 ```
-#Tukey
+### Tukey
 ```{r}
 pam_all_tukey <- TukeyHSD(pam_all_anova)
 pam_all_tukey
@@ -124,7 +283,7 @@ pam_healed_tukey
 ```
 
 
-#R2 values
+### R2 values
 ```{r}
 
 MuMIn::r.squaredGLMM(pam_all_regression)
@@ -138,7 +297,7 @@ pam_all_predictions <- ggpredict(pam_all_regression, terms = c("wound", "fish"))
   rename(wound = group)
 ```
 
-#Visualize pam_all
+### Visualize pam_all
 ```{r}
 pam_all_plot <- ggplot() +
   
@@ -181,7 +340,7 @@ pam_all_plot
 
 ```
 
-#Plot TUKEY
+### Plot TUKEY
 
 ```{r  fig.width = 20, fig.height = 40}
 tukey_plot_all <- aov(fv_fm ~ wound:fish, data = pam_undisturbed_healed)
@@ -197,7 +356,7 @@ plot(tukey_healed)
 
 #Seems that large: no fish is significantly different from small and large with fish; suggests that as wound size increases (high metabolic stress) fish effects emerge. within treatments with fish did not vary. and treatments within small wounds did not vary significantly from each other. #supports positive gradient hypothesis #IS THIS SUPPORTED BY BUOYANT WEIGHT DATA?
 ```
-#RANDOMIZATION TEST ARGHHHH
+### RANDOMIZATION TEST ARGHHHH
 ```{r}
 #PAM first
 #looking at the mean between wounds
@@ -226,7 +385,7 @@ ggplot(tibble(null_photo_dist), aes(null_photo_dist)) +
 
 
 ```
-#Means between fish within wounds
+### Means between fish within wounds
 ```{r}
 large <- pam_healed %>% 
   filter(wound == "Large")
@@ -260,7 +419,7 @@ ggplot(tibble(nulll_photo_dist), aes(nulll_photo_dist)) +
 sum(abs(diff_means) > abs(diff_means))/
   length(null_photo_dist)
 ```
-#do it for small wounds
+### do it for small wounds
 ```{r}
 small <- pam_healed %>% 
   filter(wound == "Small")
@@ -292,7 +451,7 @@ ggplot(tibble(nullll_photo_dist), aes(nullll_photo_dist)) +
 
 
 
-#Do it for growth
+### Do it for growth
 ```{r}
 buoy_data <- read.csv("fish_regen_buoyantweight (1).csv")
 ```
@@ -317,7 +476,7 @@ ggplot(tibble(nullll_photo_dist), aes(nullll_photo_dist)) +
              color = "firebrick")
 ```
 
-#something New
+### something New
 ```{r}
 null_photo_dist <- replicate(1000, {
   photo_means <- pam_healed %>%
@@ -339,4 +498,3 @@ ggplot(tibble(null_photo_dist), aes(null_photo_dist)) +
   geom_vline(xintercept = diff_means,
              color = "firebrick")
 ```
-

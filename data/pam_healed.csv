@@ -1,48 +1,48 @@
-﻿coral_id,f0,fm,fv_fm,wound,fish
-45,304,965,684,Large,Fish
-47,241,756,681,Small,Fish
-48,382,1277,700,Small,No Fish
-50,353,1052,664,Small,No Fish
-55,241,766,685,Large,Fish
-56,244,615,603,Small,Fish
-58,118,316,626,Large,No Fish
-59,278,873,681,Large,No Fish
-61,550,1582,652,Small,Fish
-62,289,887,674,Small,Fish
-65,244,745,672,Large,No Fish
-69,90,262,656,Large,No Fish
-71,99,229,567,Large,No Fish
-72,262,829,683,Small,Fish
-75,377,1203,686,Large,Fish
-78,220,691,681,Small,No Fish
-79,321,973,670,Large,No Fish
-80,250,821,695,Small,No Fish
-87,447,1458,693,Small,No Fish
-89,191,569,664,Small,No Fish
-91,189,420,550,Small,No Fish
-95,147,382,615,Large,No Fish
-96,371,1234,696,Small,Fish
-97,216,596,637,Large,No Fish
-99,437,1352,676,Large,Fish
-100,373,1227,696,Small,Fish
-101,571,1847,690,Small,Fish
-103,285,777,633,Large,No Fish
-104,119,311,617,Small,No Fish
-105,116,431,614,Small,No Fish
-106,306,1009,696,Small,Fish
-107,356,1091,673,Large,Fish
-109,500,1489,664,Large,Fish
-110,452,1435,685,Large,Fish
-111,143,367,601,Large,No Fish
-113,363,1139,681,Large,Fish
-114,344,1108,689,Small,Fish
-115,208,683,673,Small,No Fish
-116,387,1117,653,Small,Fish
-119,282,961,706,Large,Fish
-121,142,344,587,Large,No Fish
-122,333,1026,675,Small,Fish
-123,298,927,678,Large,Fish
-124,297,917,676,Small,No Fish
-126,393,1307,699,Large,Fish
-127,402,1325,696,Large,Fish
-130,306,884,653,Large,No Fish
+﻿coral_id,f0,fm,fv_fm,wound,fish,tank
+45,304,965,684,Large,Fish,1
+47,241,756,681,Small,Fish,6
+48,382,1277,700,Small,No Fish,1
+50,353,1052,664,Small,No Fish,6
+55,241,766,685,Large,Fish,2
+56,244,615,603,Small,Fish,3
+58,118,316,626,Large,No Fish,2
+59,278,873,681,Large,No Fish,2
+61,550,1582,652,Small,Fish,1
+62,289,887,674,Small,Fish,1
+65,244,745,672,Large,No Fish,6
+69,90,262,656,Large,No Fish,4
+71,99,229,567,Large,No Fish,4
+72,262,829,683,Small,Fish,3
+75,377,1203,686,Large,Fish,5
+78,220,691,681,Small,No Fish,6
+79,321,973,670,Large,No Fish,6
+80,250,821,695,Small,No Fish,6
+87,447,1458,693,Small,No Fish,6
+89,191,569,664,Small,No Fish,2
+91,189,420,550,Small,No Fish,5
+95,147,382,615,Large,No Fish,2
+96,371,1234,696,Small,Fish,1
+97,216,596,637,Large,No Fish,4
+99,437,1352,676,Large,Fish,5
+100,373,1227,696,Small,Fish,5
+101,571,1847,690,Small,Fish,5
+103,285,777,633,Large,No Fish,4
+104,119,311,617,Small,No Fish,4
+105,116,431,614,Small,No Fish,4
+106,306,1009,696,Small,Fish,3
+107,356,1091,673,Large,Fish,1
+109,500,1489,664,Large,Fish,1
+110,452,1435,685,Large,Fish,5
+111,143,367,601,Large,No Fish,2
+113,363,1139,681,Large,Fish,3
+114,344,1108,689,Small,Fish,3
+115,208,683,673,Small,No Fish,2
+116,387,1117,653,Small,Fish,5
+119,282,961,706,Large,Fish,5
+121,142,344,587,Large,No Fish,2
+122,333,1026,675,Small,Fish,3
+123,298,927,678,Large,Fish,3
+124,297,917,676,Small,No Fish,4
+126,393,1307,699,Large,Fish,1
+127,402,1325,696,Large,Fish,3
+130,306,884,653,Large,No Fish,6
