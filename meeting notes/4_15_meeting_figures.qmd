@@ -21,7 +21,7 @@ wound_closure <- read.csv("../data/Copy of fish_regen_mastersheet_wound closure_
 wound_closure_clean <- wound_closure %>% 
    filter(!is.na(wound_close), wound_close != "") %>% 
   mutate(wound_close = ifelse(wound_close == "no-barely" | wound_close == "no - barely", "no", wound_close)) %>% 
-  mutate(fish = ifelse(fish == 1, "Present", "Not Present")) %>% 
+  mutate(fish = ifelse(fish == 1, "Fish", "No Fish")) %>% 
   mutate(wound_close = ifelse(wound_close == "yes", "Yes", "No")) %>% 
   mutate(wound = ifelse(wound == 1, "Small", "Large")) %>% 
   mutate(wound_close = as.character(wound_close))

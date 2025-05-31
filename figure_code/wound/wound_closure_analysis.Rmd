@@ -1,0 +1,179 @@
+---
+title: "wound_closure_analysis"
+output: html_document
+---
+
+
+# Setup
+```{r}
+#............................packages............................
+library(janitor)
+library(tidyverse)
+library(viridis)
+library(lme4)
+library(ggeffects)
+library(sjlabelled)
+library(DHARMa)
+library(parameters)
+library(effects)
+library(MuMIn)
+library(here)
+library(tidyverse)
+library(gt)
+library(broom.mixed)
+library(ggpubr)
+#..............................data..............................
+wound_closure <- read.csv(here("data", "fish_regen_mastersheet_wound closure_necrosis_sa - mastersheet.csv"))
+
+#.........................data wrangling.........................
+wound_closure_clean <- wound_closure %>% 
+   filter(!is.na(wound_close), wound_close != "") %>% 
+  mutate(wound_close = ifelse(wound_close == "no-barely" | wound_close == "no - barely", "no", wound_close)) %>% 
+  mutate(fish = ifelse(fish == 1, "Fish", "No Fish")) %>% 
+  mutate(wound_close = ifelse(wound_close == "yes", "Yes", "No")) %>% 
+  mutate(wound = ifelse(wound == 1, "Small", "Large")) %>% 
+  mutate(wound_close = as.character(wound_close))
+
+wound_closure_glm <- wound_closure %>% 
+  filter(!is.na(wound_close), wound_close != "") %>% 
+  mutate(wound_binary = ifelse(wound_close == "yes", 1, 0))
+
+wound_prop <- wound_closure_clean %>% 
+  group_by(wound, fish) |>
+  summarize(prop_healed = mean(wound_close == "Yes"))
+
+#...........................aesthetics...........................
+wound_palette <- c("Small" = "#ffbf00", 
+                   "Large" = "#be8333")
+fish_palette <- c("Fish" = "#2b4b52", 
+                  "No Fish" = "#ad301a")
+font_add_google(name = "Josefin Sans", family = "josefin")
+showtext_auto()
+theme_set(theme_bw() +
+            theme(panel.grid = element_blank(), 
+                  plot.background = element_blank()))
+```
+# Initial Plotting
+
+## Wound Prop by Fish Presence -- colored by wound
+```{r}
+
+wound_prop %>% 
+  ggplot(aes(fish, prop_healed, fill = wound))+
+  geom_col(position = "dodge")+
+  labs(x = "Fish Presence", 
+       y = "Proportion Healed", 
+       fill = "Wound Size",
+       title = "Proportion of Healed Wounds as a Function of Fish Presence",
+       subtitle = "Colored by Wound")+
+  scale_fill_manual(values = wound_palette)+
+  theme(
+    legend.title = element_text(family = "josefin"), 
+    axis.title.x = element_text(family = "josefin"), 
+    axis.title.y = element_text(family = "josefin"), 
+    plot.title = element_text(family = "josefin"), 
+    plot.subtitle = element_text(family = "josefin"))
+
+ggsave(
+  here("figures", "healed_prop_vs_fish.png"),
+  width = 8,
+  height = 6,
+  dpi = 300
+)
+```
+
+## Wound Prop by Wound Size -- colored by fish presence 
+```{r}
+wound_prop %>% 
+  ggplot(aes(wound, prop_healed, fill = fish))+
+  geom_col(position = "dodge")+
+  labs(x = "Wound Size", 
+       y = "Proportion Healed", 
+       fill = "Fish Presence",
+       title = "Proportion of Healed Wounds as a Function of Wound Size",
+       subtitle = "Colored by Fish Presence")+
+  scale_fill_manual(values = fish_palette)+
+  theme(
+    legend.title = element_text(family = "josefin"), 
+    axis.title.x = element_text(family = "josefin"), 
+    axis.title.y = element_text(family = "josefin"), 
+    plot.title = element_text(family = "josefin"), 
+    plot.subtitle = element_text(family = "josefin"))
+
+ggsave(
+  here("figures", "healed_prop_vs_wound.png"),
+  width = 8,
+  height = 6,
+  dpi = 300
+)
+```
+# Models
+
+## Creating glmer models
+```{r}
+mod_int <- glmer(wound_binary ~ fish * wound + (1 | tank), family = binomial, data = wound_closure_glm )
+# anova(fish_glm, type="II", test.statistic="F")
+
+
+mod_add <- glmer(wound_binary ~ fish + wound + (1|tank) , family = binomial, data = wound_closure_glm)
+# anova(wound_glm, test = "Chisq")
+
+mod_fish <- glmer(wound_binary ~ fish + (1| tank), family = binomial, data = wound_closure_glm )
+# anova(fish_glmer, type="II", test.statistic="F")
+
+mod_wound <- glmer(wound_binary ~ wound + (1|tank), family = binomial, data = wound_closure_glm)
+
+mod_null <- glmer(wound_binary ~ 1 + (1|tank), family = binomial, data = wound_closure_glm)
+
+```
+
+## Likelihood tests
+```{r}
+lrt_interaction <- anova(mod_add, mod_int, test = "Chisq")
+lrt_fish <- anova(mod_wound, mod_add, test = "Chisq")
+lrt_wound <- anova(mod_fish, mod_add, test = "Chisq")
+```
+
+## Likelihood table
+```{r}
+lrt_table <- tibble(
+  Test = c("Interaction (Fish × Wound)", "Fish Effect", "Wound Effect"),
+  ChiSq = c(
+    lrt_interaction$Chisq[2],
+    lrt_fish$Chisq[2],
+    lrt_wound$Chisq[2]
+  ),
+  Df = c(
+    lrt_interaction$Df[2],
+    lrt_fish$Df[2],
+    lrt_wound$Df[2]
+  ),
+  p_value = c(
+    lrt_interaction$`Pr(>Chisq)`[2],
+    lrt_fish$`Pr(>Chisq)`[2],
+    lrt_wound$`Pr(>Chisq)`[2]
+  )
+) %>%
+  mutate(across(where(is.numeric), round, 3))
+
+# Format with gt
+lrt_table %>%
+  gt() %>%
+  tab_header(
+    title = "Table #. Likelihood Ratio Tests for Effects on wound healing",
+    #subtitle = paste("Scaled growth:", expression((final - initial)/initial^b))
+  ) %>%
+  cols_label(
+    Test = "Model Comparison",
+    ChiSq = "Chi-squared",
+    Df = "Degrees of Freedom",
+    p_value = "P-value"
+  ) %>%
+  fmt_number(columns = vars(ChiSq, p_value), decimals = 3) %>%
+  tab_options(
+    table.font.size = 14,
+    heading.title.font.size = 16,
+    heading.subtitle.font.size = 13
+  )
+```
+

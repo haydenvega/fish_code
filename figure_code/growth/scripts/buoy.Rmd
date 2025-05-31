@@ -1,0 +1,52 @@
+---
+title: "buoy_weight"
+author: "Hayden Vega"
+date: "2024-10-29"
+output: html_document
+---
+
+```{r}
+library("tidyverse")
+library("readxl")
+library("janitor")
+library('readxl')
+library("here")
+```
+
+```{r}
+buoy_data <- read.csv("fish_regen_buoyantweight (1).csv")
+coral_delta <- read.csv("coral_delta.csv")
+```
+
+```{r}
+buoy_data%>% 
+  mutate(density_stopper = (air_weight_g * 0.9965)/(air_weight_g - fresh_weight_g))%>%
+  mutate(density_sw = (air_weight_g - salt_weight_g)/ (air_weight_g / density_stopper))%>%
+  mutate(dry_mass = bouyantweight_g / (1 - (density_sw/density_aragonite)))%>%
+  mutate(coral_vol = (dry_mass / (density_aragonite - density_sw))) -> skeletal.mass 
+```
+# graph buoyant data
+```{r}
+
+skeletal.mass %>% 
+  ggplot(aes(date, bouyantweight_g, color = fish, fill = wound))+
+  geom_boxplot()
+
+```
+#graph change of drymass and volume
+```{r fig.width = 5, fig.height = 5}
+
+coral_delta %>% 
+  ggplot(aes(fish, dry_mass_delta, color = wound))+
+  geom_boxplot()+
+  coord_cartesian(ylim = c(0, 2))
+
+```
+
+```{r}
+coral_delta %>% 
+  ggplot(aes(fish, vol_delta, color = wound))+
+  geom_boxplot()+
+  coord_cartesian(ylim = c(0, 2))
+```
+

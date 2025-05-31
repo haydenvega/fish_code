@@ -1,33 +1,10 @@
 ---
 title: "pam_code"
 author: "Hayden Vega"
-date: "2024-10-09"
+date: "2025-05-30"
 output: html_document
 description: An analysis of PAM data from the fish regen project. Included are visualizations, linear models, ANOVAs, Tukey tests, and randomization tests. 
 ---
-```{r}
-devtools::install_github("an-bui/calecopal")
-install.packages("installr")
-install.packages("viridis")
-```
-
-```{r setup, include=FALSE}
-library(janitor)
-library(tidyverse)
-library(viridis)
-library(lme4)
-library(ggeffects)
-library(sjlabelled)
-library(DHARMa)
-library(parameters)
-library(effects)
-library(MuMIn)
-library(here)
-library(tidyverse)
-library(gt)
-library(broom.mixed)
-library(ggpubr)
-```
 
 # Setup
 ```{r}
@@ -47,6 +24,7 @@ library(tidyverse)
 library(gt)
 library(broom.mixed)
 library(ggpubr)
+
 
 #..........................loading data..........................
 pam_healed <- read.csv(here("data", "pam_healed.csv"))
