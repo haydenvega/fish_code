@@ -333,7 +333,7 @@ growth_stats <- bw_merged %>%
     wound = factor(wound, levels = c("No Wound", "Small", "Large")),
     fish = factor(fish),
     tank = factor(tank),
-    growth_scaled = (final_weight - initial_weight) / (initial_weight ^ b_est) #why this equation?
+    growth_scaled = log(final_weight/initial_weight ^ b_est) 
   )
 
 # --- Step 2: Fit Mixed-Effects Models ---
@@ -403,7 +403,6 @@ lrt_table %>%
 
 #..........Statistical Analysis of Growth/SA/Time Metric.........ADRIAN LOOK HERE!
 
-
 bw_sa_stats <- bw_sa_df %>%
   drop_na(initial_weight, final_weight, fish, wound, tank) %>%
   mutate(
@@ -412,6 +411,23 @@ bw_sa_stats <- bw_sa_df %>%
     tank = factor(tank),
     bw_sa_time = (final_weight - initial_weight) / (sa_cal * 21) 
   )
+
+
+#visualize the relationship between delta mass and surface area, not a super strong relationsip
+#i like final/initial or log(final/initial^b)
+
+ggplot(bw_sa_stats, aes(x = sa_cal, y = delta_mass, color = wound)) +
+  geom_point(size = 2.2, alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 1.1) +
+  scale_color_brewer(palette = "Dark2") +
+  labs(
+    title = "Coral Growth as a Function of Surface Area",
+    subtitle = "Colored by Wound Treatment",
+    x = "Surface Area (cm²)",
+    y = expression((Final - Initial) / (Surface_Area * Time)),
+    color = "Wound Treatment"
+  ) +
+  theme_pubr(base_size = 14)
 
 # --- Step 2: Fit Mixed-Effects Models ---
 
@@ -485,6 +501,23 @@ lrt_table %>%
 # 7. Visualize Scaled Growth Across Treatments (Faceted by Wound)
 # ===============================
 
+#to HV: 
+# Here’s why we use log(final_mass / initial_mass^b) as our “growth_scaled” metric:
+#  1. Allometric baseline:  M_final ≈ a * M_initial^b
+#     – b tells us how mass‐gain scales with starting size.
+#     – Dividing by initial_mass^b “removes” size‐dependent expectations.
+#  2. Log transform both sides:
+#       log(M_final) – b*log(M_initial)  =  log(M_final / M_initial^b)
+#     – Turns the power‐law into a straight line (easier for linear models).
+#     – Makes symmetric interpretation of under‐ vs. over‐performance.
+#  3. Interpretation:
+#     – A value of 0 means “grew exactly as predicted for its size.”
+#     – Positive: grew more than expected; Negative: grew less.
+#
+# So growth_scaled = log(final_weight / initial_weight^b) is our
+# size‐corrected, statistically robust growth metric.
+#To AS: THIS MAKES SO MUCH SENSE thank you for the explanation!
+
 # Ensure fish levels are ordered correctly
 growth_stats <- growth_stats %>%
   mutate(fish = factor(fish, levels = c("No Fish", "Fish")))
@@ -510,7 +543,7 @@ ggplot(growth_stats, aes(x = fish, y = growth_scaled, fill = fish)) +
     # title = "Allometrically Scaled Coral Growth by Treatment",
     # subtitle = expression(paste("Growth normalized by ", initial^b, ", grouped by Fish Treatment")),
     x = "Fish Treatment",
-    y = expression((Final - Initial) / Initial^b),
+    y = expression((M_final/M_initial^b)),
     fill = "Fish",
     color = "Fish"
   ) +
