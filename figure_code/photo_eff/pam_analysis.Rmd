@@ -92,6 +92,54 @@ ggsave(
 )
 
 #Based on both graphs above, I think there may be a significant interaction between large wounds and fish presence.
+
+
+# Enforce correct factor ordering for all downstream plots
+pam_healed <- pam_healed %>%
+  mutate(
+    wound = factor(wound, levels = c("Small", "Large")),
+    fish = factor(fish, levels = c("No Fish", "Fish"))
+  )
+ggplot(pam_healed, aes(x = wound, y = fv_fm, fill = fish)) +
+  geom_violin(position = position_dodge(0.9), alpha = 0.3, color = NA) +
+  geom_boxplot(
+    position = position_dodge(0.9), 
+    width = 0.3, 
+    outlier.shape = NA, 
+    color = "black",
+    alpha = 0.8
+  ) +
+  geom_jitter(
+    aes(color = fish),
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.9),
+    size = 2, 
+    alpha = 0.5
+  ) +
+  scale_fill_manual(values = fish_palette) +
+  scale_color_manual(values = fish_palette) +
+  labs(
+    title = "Coral Photosynthetic Efficiency vs Wound Size",
+    subtitle = "Colored by Fish Presence",
+    x = "Wound Size",
+    y = "Photosynthetic Efficiency (Fv/Fm)",
+    fill = "Fish Presence",
+    color = "Fish Presence"
+  ) +
+  theme_bw(base_size = 18) +
+  theme(
+    plot.title = element_text(size = 20, face = "bold"),
+    plot.subtitle = element_text(size = 16),
+    axis.text = element_text(size = 16),
+    axis.title = element_text(size = 18),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 15)
+  )
+
+ggsave(
+  here("figures", "photoeff_vs_wound_violin_screen.png"),
+  width = 7, height = 5, dpi = 150
+)
+
 ```
 
 ## Linear Models and Anova for Fv/Fm

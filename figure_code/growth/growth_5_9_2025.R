@@ -145,7 +145,7 @@ ggplot(bw_plot, aes(x = tank, y = initial_weight, fill = wound)) +
   )
 
 ggsave(
-  here("figures", "initial_mass_by_treatment.png"),
+  here("figures", "growth","initial_mass_by_treatment.png"),
   width = 8,
   height = 6,
   dpi = 300
@@ -282,7 +282,7 @@ ggplot(growth_df, aes(x = initial_weight, y = delta_mass, color = wound)) +
   theme_pubr(base_size = 14)
 
 ggsave(
-  here("figures", "growth_vs_initial_mass.png"),
+  here("figures", "growth","growth_vs_initial_mass.png"),
   width = 8,
   height = 6,
   dpi = 300
@@ -314,7 +314,7 @@ ggplot(bw_sa_df, aes(x = initial_weight, y = sa_cal, color = wound)) +
   theme_pubr(base_size = 14)
 
 ggsave(
-  here("figures", "sa_vs_initial_mass.png"),
+  here("figures", "growth","sa_vs_initial_mass.png"),
   width = 8,
   height = 6,
   dpi = 300
@@ -510,7 +510,7 @@ ggplot(growth_stats, aes(x = fish, y = growth_scaled, fill = fish)) +
     # title = "Allometrically Scaled Coral Growth by Treatment",
     # subtitle = expression(paste("Growth normalized by ", initial^b, ", grouped by Fish Treatment")),
     x = "Fish Treatment",
-    y = expression((Final - Initial) / Initial^b),
+    y = paste("Calcification", expression(log(Mf/Mi^b))),
     fill = "Fish",
     color = "Fish"
   ) +
@@ -522,7 +522,7 @@ ggplot(growth_stats, aes(x = fish, y = growth_scaled, fill = fish)) +
   )
 
 ggsave(
-  here("figures", "scaled_growth_by_treatment.png"),
+  here("figures","growth", "scaled_growth_by_treatment.png"),
   width = 8,
   height = 6,
   dpi = 300
@@ -569,7 +569,7 @@ ggplot(bw_sa_stats_viz, aes(x = fish, y = bw_sa_time, fill = fish)) +
   )
 
 ggsave(
-  here("figures", "growth_sa_time_by_treatment.png"),
+  here("figures", "growth","growth_sa_time_by_treatment.png"),
   width = 8,
   height = 6,
   dpi = 300
