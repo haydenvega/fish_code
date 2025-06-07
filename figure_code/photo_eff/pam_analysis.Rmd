@@ -1,6 +1,6 @@
 ---
 title: "pam_code"
-author: "Hayden Vega"
+author: "Hayden Vega & Adrian Stier"
 date: "2025-05-30"
 output: html_document
 description: An analysis of PAM data from the fish regen project. Included are visualizations, linear models, ANOVAs, Tukey tests, and randomization tests. 
@@ -214,8 +214,30 @@ lrt_table %>%
     heading.subtitle.font.size = 13
   )
 
-#THIS is so satisying! HAHAHAHAAH
+
 ```
+
+### Averaging values 
+
+```{r}
+pam_avg_wound <- pam_healed %>%
+  group_by(wound) %>%
+  summarize(mean_fvfm = mean(fv_fm, na.rm = TRUE), 
+  sd_fvfm = sd(fv_fm, na.rm = TRUE),
+            n = n()) 
+pam_avg_fish <- pam_healed %>% 
+  group_by(fish) %>% 
+  summarize(mean_fish = mean(fv_fm, na.rm = TRUE), 
+  sd_fish = sd(fv_fm, na.rm = TRUE), 
+            n = n())
+
+pam_avg <- pam_healed %>% 
+  group_by(fish, wound) %>% 
+  summarize(mean_fv_fm = mean(fv_fm, na.rm = TRUE), 
+            sd = sd(fv_fm, na.rm = TRUE), 
+            n = n())
+```
+
 
 # Old Code
 

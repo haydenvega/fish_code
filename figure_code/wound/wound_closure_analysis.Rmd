@@ -1,6 +1,7 @@
 ---
 title: "wound_closure_analysis"
 output: html_document
+author: "Hayden Vega & Adrian Stier
 ---
 
 

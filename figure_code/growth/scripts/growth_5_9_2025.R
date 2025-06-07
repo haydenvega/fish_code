@@ -150,7 +150,7 @@ ggsave(
   height = 6,
   dpi = 300
 )
-#ask if there are difference statistically THIS IS SMART
+#ask if there are difference statistically
 
 # Fit linear model with interaction
 model_lm <- lm(initial_weight ~ wound * tank, data = bw_plot)
@@ -158,9 +158,9 @@ model_lm <- lm(initial_weight ~ wound * tank, data = bw_plot)
 # ANOVA table
 anova(model_lm)
 
-#no so we move forward with our analysis looking at allooometry next 
+#no so we move forward with our analysis looking at allometry next 
 
-#...................test for differences in SA...................ADRIAN LOOK HERE!
+#...................test for differences in SA...................
 
 model_sa <- lm(sa_cal ~ wound * tank, data = bw_sa_wide)
 
@@ -288,7 +288,7 @@ ggsave(
   dpi = 300
 )
 
-#..................Visualizing SA by Inital Mass and Treatment...................ADRIAN LOOK HERE!
+#..................Visualizing SA by Inital Mass and Treatment..................
 
 # Prep data: drop NAs, ensure proper factor levels
 bw_sa_df <- bw_sa_wide %>%
