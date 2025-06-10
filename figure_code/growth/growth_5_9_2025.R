@@ -333,7 +333,7 @@ growth_stats <- bw_merged %>%
     wound = factor(wound, levels = c("No Wound", "Small", "Large")),
     fish = factor(fish),
     tank = factor(tank),
-    growth_scaled = (final_weight - initial_weight) / (initial_weight ^ b_est) #why this equation?
+    growth_scaled = log(final_weight/initial_weight ^ b_est) 
   )
 
 # --- Step 2: Fit Mixed-Effects Models ---
