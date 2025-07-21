@@ -1,7 +1,6 @@
 ---
 title: "wound_closure_analysis"
 output: html_document
-author: "Hayden Vega & Adrian Stier
 ---
 
 
@@ -168,11 +167,89 @@ ggplot(waffle_grid, aes(x = group_id, y = square_y)) +
     plot.margin = margin(10, 10, 10, 10)
   )
 
+
+
+
+# 1. Summarize counts
+waffle_data <- wound_closure_clean %>%
+  mutate(outcome = ifelse(wound_close == "Yes", "Healed", "Not Healed"),
+         # reorder fish so No Fish is left, Fish is right
+         fish    = factor(fish, levels = c("No Fish", "Fish"))
+  ) %>%
+  count(fish, wound, outcome)
+
+# 2. Compute per‐group percent healed
+pct <- waffle_data %>%
+  group_by(fish, wound) %>%
+  summarise(
+    total    = sum(n),
+    healed   = sum(if_else(outcome == "Healed", n, 0)),
+    pct_heal = healed / total * 100,
+    .groups  = "drop"
+  )
+
+# 3. Plot with facets: No Fish on left, Fish on right
+library(waffle)    
+library(ggplot2)
+library(dplyr)
+
+# 1. Summarize counts
+waffle_data <- wound_closure_clean %>%
+  mutate(outcome = ifelse(wound_close == "Yes", "Healed", "Not Healed"),
+         fish    = factor(fish, levels = c("No Fish", "Fish"))
+  ) %>%
+  count(fish, wound, outcome)
+
+# 2. Compute per‐group percent healed for annotation
+pct <- waffle_data %>%
+  group_by(fish, wound) %>%
+  summarise(
+    total    = sum(n),
+    healed   = sum(if_else(outcome == "Healed", n, 0)),
+    pct_heal = healed / total * 100,
+    .groups  = "drop"
+  )
+
+# 3. Plot
+ggplot(waffle_data, aes(values = n, fill = outcome)) +
+  geom_waffle(
+    n_rows = 6,
+    size   = 0.3,       # thickness of the border
+    colour = "black"    # black outline around every square
+  ) +
+  facet_grid(wound ~ fish) +
+  scale_fill_manual(
+    values = c(
+      "Healed"     = "#2b4b52",
+      "Not Healed" = "white"    # white fill = “empty” box
+    ),
+    guide = guide_legend(title = "Outcome")
+  ) +
+  geom_text(
+    data = pct,
+    aes(x = Inf, y = Inf, label = paste0(round(pct_heal), "%")),
+    hjust = 1.1, vjust = 1.5,
+    size = 5, fontface = "bold",
+    inherit.aes = FALSE
+  ) +
+  labs(
+    title    = "Wound Closure Outcomes by Treatment",
+    subtitle = "Each square = one coral fragment"
+  ) +
+  theme_void(base_size = 14) +
+  theme(
+    strip.text      = element_text(face = "bold", size = 12),
+    legend.position = "bottom",
+    plot.title      = element_text(face = "bold", size = 16),
+    plot.subtitle   = element_text(size = 14)
+  )
+
+
 # --------------------------------------------
 # 3. Save with optimal figure size
 # --------------------------------------------
 
-ggsave(here("figures","wound_closure", "wound_closure_waffle_manuscript_final.png"),
+ggsave(here("figures","wound_closure", "wound_closure_waffle_manuscript_final.pdf"),
        width = 6, height = 6, bg="white",dpi=150)
 
 
