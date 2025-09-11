@@ -28,6 +28,9 @@ library(waffle)
 #..............................data..............................
 wound_closure <- read.csv(here("data", "fish_regen_mastersheet_wound closure_necrosis_sa - mastersheet.csv"))
 
+percent_closure <- read.csv(here("data", "final_wound_size_dascyllus_project - Sheet1.csv"))
+  
+
 #.........................data wrangling.........................
 wound_closure_clean <- wound_closure %>% 
    filter(!is.na(wound_close), wound_close != "") %>% 
@@ -44,6 +47,14 @@ wound_closure_glm <- wound_closure %>%
 wound_prop <- wound_closure_clean %>% 
   group_by(wound, fish) |>
   summarize(prop_healed = mean(wound_close == "Yes"))
+
+percent_closure <- percent_closure %>% 
+    filter(percent.healed >= 0) %>% 
+  mutate(fish = as.numeric(fish)) %>% 
+  mutate(fish = ifelse(fish == 1, "Fish", "No Fish")) %>% 
+  mutate(wound = ifelse(wound == 1, "Small", "Large"))
+
+percent_closure$prop <- percent_closure$percent.healed/100 
 
 #...........................aesthetics...........................
 wound_palette <- c("Small" = "#ffbf00", 
@@ -83,6 +94,28 @@ ggsave(
   height = 6,
   dpi = 300
 )
+```
+
+
+## Prop final wound size by fish and wound
+```{r}
+percent_closure %>% 
+  ggplot(aes(fish, percent.healed, fill = wound))+
+  geom_boxplot()+
+  labs(x = "Fish Presence", 
+       y = "Percent Healed", 
+       fill = "Wound Size",
+       title = "Final Percent Healed as a Function of Fish Presence",
+       subtitle = "Colored by Wound")+
+  scale_fill_manual(values = wound_palette)+
+  theme(
+    legend.title = element_text(family = "josefin"), 
+    axis.title.x = element_text(family = "josefin"), 
+    axis.title.y = element_text(family = "josefin"), 
+    plot.title = element_text(family = "josefin"), 
+    plot.subtitle = element_text(family = "josefin"))
+
+
 ```
 
 ## Wound Prop by Wound Size -- colored by fish presence 
@@ -254,11 +287,11 @@ ggsave(here("figures","wound_closure", "wound_closure_waffle_manuscript_final.pd
 
 
 ```
-# Models
+# Models for healed/not healed
 
-## Creating glmer models
+## Creating lmer models
 ```{r}
-mod_int <- glmer(wound_binary ~ fish * wound + (1 | tank), family = binomial, data = wound_closure_glm )
+mod_int <- glmer(wound_binary ~ fish * wound + (1 | tank), family = binomial, data = wound_closure_glm)
 # anova(fish_glm, type="II", test.statistic="F")
 
 
@@ -324,6 +357,83 @@ lrt_table %>%
   )
 ```
 
+# Models for final percent healed
+
+## Creating lmer models
+```{r}
+mod_int_p <- lmer(prop ~ fish * wound + (1 | tank), data = percent_closure )
+# anova(fish_glm, type="II", test.statistic="F")
 
 
+mod_add_p <- lmer(prop ~ fish + wound + (1|tank), data = percent_closure)
+# anova(wound_glm, test = "Chisq")
+
+mod_fish_p <- lmer(prop ~ fish + (1| tank), data = percent_closure )
+# anova(fish_glmer, type="II", test.statistic="F")
+
+mod_wound_p <- lmer(prop ~ wound + (1|tank), data = percent_closure)
+
+mod_null_p <- lmer(prop ~ 1 + (1|tank), data = percent_closure)
+
+```
+
+## Likelihood tests
+```{r}
+lrt_interaction_p <- anova(mod_add_p, mod_int_p, test = "Chisq")
+lrt_fish_p <- anova(mod_wound_p, mod_add_p, test = "Chisq")
+lrt_wound_p <- anova(mod_fish_p, mod_add_p, test = "Chisq")
+```
+
+## Likelihood table
+```{r}
+lrt_table_p <- tibble(
+  Test = c("Interaction (Fish × Wound)", "Fish Effect", "Wound Effect"),
+  ChiSq = c(
+    lrt_interaction_p$Chisq[2],
+    lrt_fish_p$Chisq[2],
+    lrt_wound_p$Chisq[2]
+  ),
+  Df = c(
+    lrt_interaction_p$Df[2],
+    lrt_fish_p$Df[2],
+    lrt_wound_p$Df[2]
+  ),
+  p_value = c(
+    lrt_interaction_p$`Pr(>Chisq)`[2],
+    lrt_fish_p$`Pr(>Chisq)`[2],
+    lrt_wound_p$`Pr(>Chisq)`[2]
+  )
+) %>%
+  mutate(across(where(is.numeric), round, 3))
+
+# Format with gt
+lrt_table_p %>%
+  gt() %>%
+  tab_header(
+    title = "Table #. Likelihood Ratio Tests for Effects on Final Proportion Healed",
+    #subtitle = paste("Scaled growth:", expression((final - initial)/initial^b))
+  ) %>%
+  cols_label(
+    Test = "Model Comparison",
+    ChiSq = "Chi-squared",
+    Df = "Degrees of Freedom",
+    p_value = "P-value"
+  ) %>%
+  fmt_number(columns = vars(ChiSq, p_value), decimals = 3) %>%
+  tab_options(
+    table.font.size = 14,
+    heading.title.font.size = 16,
+    heading.subtitle.font.size = 13
+  )
+```
+
+### quick analysis
+```{r}
+mod <- lmer(percent.healed ~ fish * wound + (1|tank), data = percent_closure)
+
+summary(mod)
+anova(mod)
+
+# Note, see significant fish effect = 0.0362 YESSS!
+```
 
