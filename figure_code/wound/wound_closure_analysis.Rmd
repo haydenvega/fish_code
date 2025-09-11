@@ -410,7 +410,7 @@ lrt_table_p <- tibble(
 lrt_table_p %>%
   gt() %>%
   tab_header(
-    title = "Table #. Likelihood Ratio Tests for Effects on Final Proportion Healed",
+    title = "Table #. Likelihood Ratio Tests for Effects on Final Percent Healed",
     #subtitle = paste("Scaled growth:", expression((final - initial)/initial^b))
   ) %>%
   cols_label(
