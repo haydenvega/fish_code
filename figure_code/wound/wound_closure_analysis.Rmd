@@ -363,7 +363,7 @@ lrt_table %>%
 ```
 
 # Models for final proportion of wound remaining
-#simultaneous model comparisons
+#simultaneous model comparisons - best model?
 ```{r}
 mod_full <- glmmTMB(
   prop_wound_remaining ~ fish * wound + (1 | tank),
