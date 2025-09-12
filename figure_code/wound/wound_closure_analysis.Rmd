@@ -372,7 +372,6 @@ mod_full <- glmmTMB(
   family = beta_family(link = "logit")
 )
 
-summary(mod_full)
 
 mod_no_interaction <- glmmTMB(
   prop_wound_remaining ~ fish + wound + (1 | tank),  # 
@@ -380,6 +379,7 @@ mod_no_interaction <- glmmTMB(
   data = percent_closure,
   family = beta_family(link = "logit")
 )
+
 
 mod_no_fish <- glmmTMB(
   prop_wound_remaining ~ wound + (1 | tank),  # 
@@ -394,6 +394,7 @@ mod_no_wound <- glmmTMB(
   data = percent_closure,
   family = beta_family(link = "logit")
 )
+
 
 lrt_interaction_zero <- anova(mod_no_interaction, mod_full, test = "Chisq")
 lrt_fish_zero <- anova(mod_no_fish, mod_no_interaction, test = "Chisq")
@@ -517,7 +518,7 @@ mod_no_interaction_zero <- glmmTMB(
 )
 
 mod_no_fish_zero <- glmmTMB(
-  prop_wound_remaining ~ fish * wound (1 | tank),  
+  prop_wound_remaining ~ fish * wound + (1 | tank),  
   ziformula = ~ wound,                      
   data = percent_closure,
   family = beta_family(link = "logit")
@@ -550,6 +551,8 @@ lrt_table <- tibble(
 
 lrt_table
 ```
+
+
 ### model comparisons with zero kept to fixed effects
 ```{r}
 mod_full <- glmmTMB(
