@@ -25,6 +25,7 @@ library(ggpubr)
 library(sysfonts)
 library(showtext)
 library(waffle)
+library(glmmTMB)
 #..............................data..............................
 wound_closure <- read.csv(here("data", "fish_regen_mastersheet_wound closure_necrosis_sa - mastersheet.csv"))
 
@@ -52,7 +53,10 @@ percent_closure <- percent_closure %>%
     filter(percent.healed >= 0) %>% 
   mutate(fish = as.numeric(fish)) %>% 
   mutate(fish = ifelse(fish == 1, "Fish", "No Fish")) %>% 
-  mutate(wound = ifelse(wound == 1, "Small", "Large"))
+  mutate(wound = ifelse(wound == 1, "Small", "Large")) 
+
+percent_closure$tank <- as.factor(percent_closure$tank)
+
 
 percent_closure$prop <- percent_closure$percent.healed/100 
 
@@ -359,21 +363,43 @@ lrt_table %>%
 
 # Models for final percent healed
 
-## Creating lmer models
+## Creating glmmTMB models
 ```{r}
-mod_int_p <- lmer(prop ~ fish * wound + (1 | tank), data = percent_closure )
-# anova(fish_glm, type="II", test.statistic="F")
+mod_int_p <- glmmTMB(
+  prop_wound_remaining ~ fish * wound + (1 | tank),
+  ziformula = ~ fish * wound,
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
 
 
-mod_add_p <- lmer(prop ~ fish + wound + (1|tank), data = percent_closure)
-# anova(wound_glm, test = "Chisq")
+mod_add_p <- glmmTMB(
+  prop_wound_remaining ~ fish + wound + (1 | tank),
+  ziformula = ~ fish * wound,
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
 
-mod_fish_p <- lmer(prop ~ fish + (1| tank), data = percent_closure )
-# anova(fish_glmer, type="II", test.statistic="F")
+mod_fish_p <- glmmTMB(
+  prop_wound_remaining ~ fish + (1 | tank),
+  ziformula = ~ fish * wound,
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
 
-mod_wound_p <- lmer(prop ~ wound + (1|tank), data = percent_closure)
+mod_wound_p <- glmmTMB(
+  prop_wound_remaining ~ wound + (1 | tank),
+  ziformula = ~ fish * wound,
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
 
-mod_null_p <- lmer(prop ~ 1 + (1|tank), data = percent_closure)
+mod_null_p <- glmmTMB(
+  prop_wound_remaining ~ 1 + (1 | tank),
+  ziformula = ~ fish * wound,
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
 
 ```
 
@@ -427,13 +453,190 @@ lrt_table_p %>%
   )
 ```
 
-### quick analysis
+### figuring which model to use for final wound healing
 ```{r}
-mod <- lmer(percent.healed ~ fish * wound + (1|tank), data = percent_closure)
+#modeling proportion of the wound remaining at Tf, this gets around the 1 inflation, and allows for 0 inflation, which glmmTMB can deal with. 
+percent_closure$prop_wound_remaining <- 1 - percent_closure$prop
+                              
+beta_mod <- glmmTMB(
+  prop_wound_remaining ~ fish * wound + (1 | tank),
+  ziformula = ~ fish * wound,
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
 
+summary(beta_mod)
+
+beta_mod_null<- glmmTMB(
+  prop_wound_remaining ~ fish * wound + (1 | tank),
+  ziformula = ~1,
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
+
+beta_mod_fix<- glmmTMB(
+  prop_wound_remaining ~ fish * wound + (1 | tank),
+  ziformula = ~fish + wound,
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
+
+beta_mod_fish<- glmmTMB(
+  prop_wound_remaining ~ fish * wound + (1 | tank),
+  ziformula = ~fish,
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
+summary(beta_mod)
+AIC(beta_mod_null, beta_mod)
+AIC(beta_mod_fish, beta_mod_fix)
+
+summary(beta_mod_fish)
+summary(beta_mod_null)
+
+
+
+
+#GAMLSS analysis...I don't trust any of these models. Partly because I proabably don't understand and because they're not giving me the values I want :(
+beta_prop_1 <- gamlss(
+  prop ~ fish * wound + random(tank),    
+  sigma.fo = ~1,                        
+  nu.fo    = ~1,                        
+  tau.fo   = ~ fish * wound,           
+  family   = BEINF,
+  data     = percent_closure
+)
+
+
+mod <- gamlss(
+  prop ~ fish * wound + random(tank),
+  family = BEINF,
+  data = percent_closure
+)
+
+beta_prop_null <- gamlss(
+  prop ~ fish * wound + random(tank),    
+  sigma.fo = ~1,                        
+  nu.fo    = ~1,                        
+  tau.fo   = ~1,           
+  family   = BEINF,
+  data     = percent_closure
+)
+
+summary(beta_prop_null)
 summary(mod)
-anova(mod)
 
-# Note, see significant fish effect = 0.0362 YESSS!
+AIC(beta_prop_1, beta_prop_null)
+anova(beta_prop_1, beta_prop_null)
+
+```
+#trying something new simultaneous model comparisons
+```{r}
+mod_full <- glmmTMB(
+  prop_wound_remaining ~ fish * wound + (1 | tank),
+  ziformula = ~ fish * wound,
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
+
+summary(mod_full)
+
+mod_no_interaction <- glmmTMB(
+  prop_wound_remaining ~ fish + wound + (1 | tank),  # no interaction in conditional
+  ziformula = ~ fish + wound,                         # no interaction in zero-inflation
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
+
+# Remove fish effect
+mod_no_fish <- glmmTMB(
+  prop_wound_remaining ~ wound + (1 | tank),  # conditional
+  ziformula = ~ wound,                         # zero-inflation
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
+
+# Remove wound effect
+mod_no_wound <- glmmTMB(
+  prop_wound_remaining ~ fish + (1 | tank),  # conditional
+  ziformula = ~ fish,                         # zero-inflation
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
+
+lrt_interaction <- anova(mod_no_interaction, mod_full, test = "Chisq")
+lrt_fish <- anova(mod_no_fish, mod_full, test = "Chisq")
+lrt_wound <- anova(mod_no_wound, mod_full, test = "Chisq")
+
+lrt_table <- tibble(
+  Test = c("Interaction (Fish × Wound)", "Fish Effect", "Wound Effect"),
+  ChiSq = c(lrt_interaction$Chisq[2],
+            lrt_fish$Chisq[2],
+            lrt_wound$Chisq[2]),
+  Df = c(lrt_interaction$Df[2],
+         lrt_fish$Df[2],
+         lrt_wound$Df[2]),
+  p_value = c(lrt_interaction$`Pr(>Chisq)`[2],
+              lrt_fish$`Pr(>Chisq)`[2],
+              lrt_wound$`Pr(>Chisq)`[2])
+) %>%
+  mutate(across(where(is.numeric), round, 3))
+
+lrt_table
+
+```
+### zero - model comparisons
+```{r}
+mod_full <- glmmTMB(
+  prop_wound_remaining ~ fish * wound + (1 | tank),
+  ziformula = ~ fish * wound,
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
+
+summary(mod_full)
+
+mod_no_interaction <- glmmTMB(
+  prop_wound_remaining ~ fish * wound + (1 | tank),  # no interaction in conditional
+  ziformula = ~ fish + wound,                         # no interaction in zero-inflation
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
+
+# Remove fish effect
+mod_no_fish <- glmmTMB(
+  prop_wound_remaining ~ fish * wound (1 | tank),  # conditional
+  ziformula = ~ wound,                         # zero-inflation
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
+
+# Remove wound effect
+mod_no_wound <- glmmTMB(
+  prop_wound_remaining ~ fish * wound + (1 | tank),  # conditional
+  ziformula = ~ fish,                         # zero-inflation
+  data = percent_closure,
+  family = beta_family(link = "logit")
+)
+
+lrt_interaction <- anova(mod_no_interaction, mod_full, test = "Chisq")
+lrt_fish <- anova(mod_no_fish, mod_full, test = "Chisq")
+lrt_wound <- anova(mod_no_wound, mod_full, test = "Chisq")
+
+lrt_table <- tibble(
+  Test = c("Interaction (Fish × Wound)", "Fish Effect", "Wound Effect"),
+  ChiSq = c(lrt_interaction$Chisq[2],
+            lrt_fish$Chisq[2],
+            lrt_wound$Chisq[2]),
+  Df = c(lrt_interaction$Df[2],
+         lrt_fish$Df[2],
+         lrt_wound$Df[2]),
+  p_value = c(lrt_interaction$`Pr(>Chisq)`[2],
+              lrt_fish$`Pr(>Chisq)`[2],
+              lrt_wound$`Pr(>Chisq)`[2])
+) %>%
+  mutate(across(where(is.numeric), round, 3))
+
+lrt_table
 ```
 
