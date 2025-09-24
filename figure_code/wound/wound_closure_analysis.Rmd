@@ -501,7 +501,9 @@ lrt_table %>%
 ## R2 values
 
 ```{r}
+r2_full <- r.squaredGLMM(rate_full)
 
+r2_full
 ```
 
 
