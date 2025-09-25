@@ -445,13 +445,13 @@ rate_full <- lmer(
 
 
 rate_no_interaction <- lmer(
-  healing_rate ~ fish + wound + (1 | tank),  # 
+  healing_rate ~ fish + wound + (1 | tank),   
   data = percent_closure
 )
 
 
 rate_no_fish <- lmer(
-  healing_rate ~ wound + (1 | tank),  # 
+  healing_rate ~ wound + (1 | tank),   
   data = percent_closure
 )
 
