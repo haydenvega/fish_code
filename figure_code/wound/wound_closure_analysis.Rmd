@@ -743,8 +743,52 @@ gt_table_rate <- lrt_table_rate %>%
 print(gt_table_rate)
 gtsave(gt_table_rate, here("figures","lrt_table_rate.html"))
 
+
+
 # Interpretation note:
 # Significant p-values (p < 0.05) indicate an effect of fish presence or wound size on healing rate.
+
+library(ggplot2)
+library(dplyr)
+
+plot_data <- percent_closure %>%
+  select(coral_id, fish, wound, initial_wound_size_cm, wound_size_final) %>%
+  tidyr::pivot_longer(
+    cols = c(initial_wound_size_cm, wound_size_final),
+    names_to = "timepoint", values_to = "wound_size"
+  ) %>%
+  mutate(timepoint = factor(ifelse(timepoint == "initial_wound_size_cm", "Initial", "Final"),
+                            levels = c("Initial", "Final")))
+
+ggplot(plot_data, aes(x = timepoint, y = wound_size,
+                      group = coral_id, color = fish)) +
+  geom_line(alpha = 0.5, size = 1,
+            position = position_jitter(width = 0.05, height = 0)) +
+  geom_point(size = 2, alpha = 0.9,
+             position = position_jitter(width = 0.05, height = 0)) +
+  stat_summary(aes(group = fish),
+               fun = mean, geom = "line", size = 1.5,
+               position = position_dodge(width = 0.3)) +
+  facet_wrap(~ wound, scales = "free_y") +
+  scale_color_manual(values = c("No Fish" = "#ad301a", "Fish" = "#2b4b52")) +
+  labs(
+    x = "Timepoint",
+    y = "Wound Size (cm²)",
+    color = "Fish Presence",
+    title = "Initial vs Final Wound Size per Coral",
+    subtitle = "Faceted by wound size treatment; each line = one coral trajectory"
+  ) +
+  theme_bw(base_size = 16) +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 14),
+    legend.position = "top",
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 13),
+    plot.title = element_text(size = 20, face = "bold"),
+    plot.subtitle = element_text(size = 15)
+  )
 ```
 
 # --------------------------------------------
