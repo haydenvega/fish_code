@@ -4,6 +4,20 @@ output: html_document
 ---
 
 
+# ===============================
+# Setup
+# ===============================
+# Load all required packages for:
+#  - Data wrangling (tidyverse, janitor)
+#  - Mixed-effects modeling (lme4, glmmTMB)
+#  - Model diagnostics (DHARMa, parameters)
+#  - Summaries and tables (MuMIn, broom.mixed, gt)
+#  - Visualization (ggplot2, viridis, ggpubr, waffle)
+#  - Reproducibility (here for file paths, showtext for fonts)
+#
+# Having this section explicit ensures anyone can reproduce
+# the workflow by installing/loading the same packages.
+
 # Setup
 ```{r}
 #............................packages............................
@@ -12,54 +26,113 @@ library(tidyverse)
 library(viridis)
 library(lme4)
 library(ggeffects)
-library(sjlabelled)
 library(DHARMa)
 library(parameters)
-library(effects)
 library(MuMIn)
 library(here)
-library(tidyverse)
 library(gt)
 library(broom.mixed)
 library(ggpubr)
 library(sysfonts)
 library(showtext)
+# gamlss is required for exploratory BEINF models below.
+# If not installed, install it automatically (useful for reproducibility).
+if (!requireNamespace("gamlss", quietly = TRUE)) {
+  install.packages("gamlss")
+}
+library(gamlss)
+
+# gamlss.dist contains additional distribution families (e.g., BEINF).
+if (!requireNamespace("gamlss.dist", quietly = TRUE)) {
+  install.packages("gamlss.dist")
+}
+library(gamlss.dist)
 library(waffle)
 library(glmmTMB)
-#..............................data..............................
+#
+# ===============================
+# Data Import
+# ===============================
+# Read in wound closure dataset:
+#   - Contains categorical wound closure outcomes
+#   - Includes metadata on fish presence, wound size, and tanks
+#
+# Read in final wound size dataset:
+#   - Contains continuous percent healed values
+#   - Will be used for proportion/continuous modeling
+#
+# Using `here()` keeps file paths portable across different computers.
+#
 wound_closure <- read.csv(here("data", "fish_regen_mastersheet_wound closure_necrosis_sa - mastersheet.csv"))
 
 percent_closure <- read.csv(here("data", "final_wound_size_dascyllus_project - Sheet1.csv"))
   
+# ===============================
+# Data Wrangling
+# ===============================
+## Helper function for consistent treatment factor coding
+# Helper function for consistent treatment factor coding
+prep_treatments <- function(df) {
+  df %>%
+    mutate(
+      fish = ifelse(fish == 1, "Fish", ifelse(fish == 0, "No Fish", fish)),
+      wound = case_when(
+        wound == 0 ~ "No wound",
+        wound == 1 ~ "Small",
+        wound == 2 ~ "Large",
+        TRUE ~ as.character(wound)
+      )
+    ) %>%
+    mutate(
+      fish  = factor(fish, levels = c("No Fish", "Fish")),
+      wound = factor(wound, levels = c("No wound", "Small", "Large"))
+    )
+}
 
 #.........................data wrangling.........................
-wound_closure_clean <- wound_closure %>% 
-   filter(!is.na(wound_close), wound_close != "") %>% 
-  mutate(wound_close = ifelse(wound_close == "no-barely" | wound_close == "no - barely", "no", wound_close)) %>% 
-  mutate(fish = ifelse(fish == 1, "Fish", "No Fish")) %>% 
-  mutate(wound_close = ifelse(wound_close == "yes", "Yes", "No")) %>% 
-  mutate(wound = ifelse(wound == 1, "Small", "Large")) %>% 
+wound_closure_clean <- wound_closure %>%
+  filter(!is.na(wound_close), wound_close != "") %>%
+  mutate(wound_close = ifelse(wound_close %in% c("no-barely","no - barely"), "no", wound_close)) %>%
+  mutate(wound_close = ifelse(wound_close == "yes", "Yes", "No")) %>%
+  prep_treatments() %>%
   mutate(wound_close = as.character(wound_close))
 
-wound_closure_glm <- wound_closure %>% 
-  filter(!is.na(wound_close), wound_close != "") %>% 
-  mutate(wound_binary = ifelse(wound_close == "yes", 1, 0))
+## Safety check: Ensure factors used in the model have at least two levels
+# Ensure factors have >1 level before modeling
+wound_closure_glm <- wound_closure %>%
+  filter(!is.na(wound_close), wound_close != "") %>%
+  mutate(wound_bin = ifelse(wound_close == "yes", 1, 0)) %>%
+  prep_treatments() %>%
+  filter(!is.na(fish), !is.na(wound), !is.na(tank)) %>%
+  droplevels()
 
-wound_prop <- wound_closure_clean %>% 
+# Drop any rows where fish or wound is missing or only one level remains
+if (nlevels(wound_closure_glm$fish) < 2 | nlevels(wound_closure_glm$wound) < 2) {
+  stop("Fish or wound factors have <2 levels. Check input data.")
+}
+
+# Print quick summary of factor levels
+print(table(wound_closure_glm$fish, wound_closure_glm$wound))
+
+wound_prop <- wound_closure_clean %>%
   group_by(wound, fish) |>
   summarize(prop_healed = mean(wound_close == "Yes"))
 
-percent_closure <- percent_closure %>% 
-    filter(percent.healed >= 0) %>% 
-  mutate(fish = as.numeric(fish)) %>% 
-  mutate(fish = ifelse(fish == 1, "Fish", "No Fish")) %>% 
-  mutate(wound = ifelse(wound == 1, "Small", "Large")) 
+percent_closure <- percent_closure %>%
+  filter(percent.healed >= 0) %>%
+  prep_treatments()
 
 percent_closure$tank <- as.factor(percent_closure$tank)
 
-percent_closure$prop <- percent_closure$percent.healed/100 
+# Convert percent healed to proportion (0–1 scale)
+percent_closure$prop <- percent_closure$percent.healed/100
 
-percent_closure$prop_wound_remaining <- 1 - percent_closure$prop
+# Calculate proportion of wound remaining (used in beta regression models)
+percent_closure$prop_remaining <- 1 - percent_closure$prop
+
+# Quick dataset summaries for QA
+glimpse(wound_closure_clean)
+glimpse(percent_closure)
 
 #...........................aesthetics...........................
 wound_palette <- c("Small" = "#ffbf00", 
@@ -74,241 +147,338 @@ theme_set(theme_bw() +
 ```
 # Initial Plotting
 
+# ===============================
+# Visualization 1: Proportion Healed by Fish Presence
+# ===============================
+# Purpose:
+#   Shows how fish presence influences the proportion of wounds healed,
+#   split by wound size (small vs. large).
+# Design:
+#   - Bar chart (geom_col) with dodge to compare fish presence categories.
+#   - Fill = wound size for grouping.
+# Interpretation:
+#   Look for differences between "Fish" vs. "No Fish" bars within each wound class.
+# Reproducibility:
+#   Saved with ggsave for manuscript-quality figure (300 dpi, 8 × 6 in).
 ## Wound Prop by Fish Presence -- colored by wound
 ```{r}
-
-wound_prop %>% 
-  ggplot(aes(fish, prop_healed, fill = wound))+
-  geom_col(position = "dodge")+
-  labs(x = "Fish Presence", 
-       y = "Proportion Healed", 
-       fill = "Wound Size",
-       title = "Proportion of Healed Wounds as a Function of Fish Presence",
-       subtitle = "Colored by Wound")+
-  scale_fill_manual(values = wound_palette)+
-  theme(
-    legend.title = element_text(family = "josefin"), 
-    axis.title.x = element_text(family = "josefin"), 
-    axis.title.y = element_text(family = "josefin"), 
-    plot.title = element_text(family = "josefin"), 
-    plot.subtitle = element_text(family = "josefin"))
-
-ggsave(
-  here("figures", "healed_prop_vs_fish.png"),
-  width = 8,
-  height = 6,
-  dpi = 300
-)
-```
-
-
-## Prop final wound size by fish and wound
-```{r}
-percent_closure %>% 
-  ggplot(aes(fish, prop_wound_remaining, fill = wound))+
-  geom_boxplot()+
-  labs(x = "Fish Presence", 
-       y = "Percent Healed", 
-       fill = "Wound Size",
-       title = "Final Percent Healed as a Function of Fish Presence",
-       subtitle = "Colored by Wound")+
-  scale_fill_manual(values = wound_palette)+
-  theme(
-    legend.title = element_text(family = "josefin"), 
-    axis.title.x = element_text(family = "josefin"), 
-    axis.title.y = element_text(family = "josefin"), 
-    plot.title = element_text(family = "josefin"), 
-    plot.subtitle = element_text(family = "josefin"))
-
-
-```
-
-## Wound Prop by Wound Size -- colored by fish presence 
-```{r}
-wound_prop %>% 
-  ggplot(aes(wound, prop_healed, fill = fish))+
-  geom_col(position = "dodge")+
-  labs(x = "Wound Size", 
-       y = "Proportion Healed", 
-       fill = "Fish Presence",
-       title = "Proportion of Healed Wounds as a Function of Wound Size",
-       subtitle = "Colored by Fish Presence")+
-  scale_fill_manual(values = fish_palette)+
-  theme(
-    legend.title = element_text(family = "josefin"), 
-    axis.title.x = element_text(family = "josefin"), 
-    axis.title.y = element_text(family = "josefin"), 
-    plot.title = element_text(family = "josefin"), 
-    plot.subtitle = element_text(family = "josefin"))
-
-ggsave(
-  here("figures","healed_prop_vs_wound.png"),
-  width = 8,
-  height = 6,
-  dpi = 300
-)
-
-# Load libraries
-library(tidyverse)
-library(here)
-
-# --------------------------------------------
-# 1. Prep waffle grid
-# --------------------------------------------
-
-wound_counts_long <- wound_closure_clean %>%
-  mutate(outcome = ifelse(wound_close == "Yes", "Healed", "Not Healed")) %>%
-  group_by(wound, fish, outcome) %>%
-  summarise(n = n(), .groups = "drop")
-
-waffle_grid <- wound_counts_long %>%
-  uncount(n)
-
-waffle_grid <- waffle_grid %>%
-  group_by(wound, fish, outcome) %>%
-  mutate(id = row_number()) %>%
-  group_by(wound, fish) %>%
-  mutate(square_y = row_number()) %>%
-  ungroup()
-
-waffle_grid <- waffle_grid %>%
-  mutate(group_id = paste(fish, wound, sep = " - ")) %>%
-  mutate(group_id = factor(group_id, 
-                            levels = c("Fish - Large", "No Fish - Large", "Fish - Small", "No Fish - Small"))) 
-
-# --------------------------------------------
-# 2. Plot with fully adjusted aesthetics
-# --------------------------------------------
-
-ggplot(waffle_grid, aes(x = group_id, y = square_y)) +
-  geom_tile(aes(fill = outcome), width = 0.8, height = 0.8, color = "black", linewidth = 0.3) +
-  scale_fill_manual(values = c("Healed" = "black", "Not Healed" = "white")) +
+## Publication-quality Visualization 1
+p1 <- ggplot(wound_prop, aes(fish, prop_healed, fill = wound)) +
+  geom_col(position = "dodge") +
   labs(
-    title = "Wound Closure Outcomes by Treatment",
-    subtitle = "Each square = 1 coral fragment",
-    x = NULL, y = NULL, fill = "Wound Closure"
+    x = "Fish Presence",
+    y = "Proportion Healed (0–1)",
+    fill = "Wound Size",
+    title = "Proportion of Healed Wounds as a Function of Fish Presence",
+    subtitle = "Grouped by Wound Size"
   ) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
-  scale_x_discrete(labels = c("Fish - Large", "No Fish - Large", "Fish - Small", "No Fish - Small")) +
-  coord_cartesian(clip = "off") +
+  scale_fill_manual(values = wound_palette)
+p1 <- p1 +
   theme_bw(base_size = 14) +
   theme(
-    axis.text.x = element_text(size = 14, vjust = 2),
-    axis.text.y = element_blank(),
-    axis.ticks = element_blank(),
     panel.grid = element_blank(),
-    legend.position = "right",
-    legend.title = element_text(size = 14),
-    legend.text = element_text(size = 13),
-    plot.title = element_text(size = 18, face = "bold"),
-    plot.subtitle = element_text(size = 15),
-    plot.margin = margin(10, 10, 10, 10)
+    axis.title = element_text(size = 16, face = "bold"),
+    axis.text = element_text(size = 14),
+    legend.position = "top",
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 12)
   )
-
-
-
-
-# 1. Summarize counts
-waffle_data <- wound_closure_clean %>%
-  mutate(outcome = ifelse(wound_close == "Yes", "Healed", "Not Healed"),
-         # reorder fish so No Fish is left, Fish is right
-         fish    = factor(fish, levels = c("No Fish", "Fish"))
-  ) %>%
-  count(fish, wound, outcome)
-
-# 2. Compute per‐group percent healed
-pct <- waffle_data %>%
-  group_by(fish, wound) %>%
-  summarise(
-    total    = sum(n),
-    healed   = sum(if_else(outcome == "Healed", n, 0)),
-    pct_heal = healed / total * 100,
-    .groups  = "drop"
-  )
-
-# 3. Plot with facets: No Fish on left, Fish on right
-library(waffle)    
-library(ggplot2)
-library(dplyr)
-
-# 1. Summarize counts
-waffle_data <- wound_closure_clean %>%
-  mutate(outcome = ifelse(wound_close == "Yes", "Healed", "Not Healed"),
-         fish    = factor(fish, levels = c("No Fish", "Fish"))
-  ) %>%
-  count(fish, wound, outcome)
-
-# 2. Compute per‐group percent healed for annotation
-pct <- waffle_data %>%
-  group_by(fish, wound) %>%
-  summarise(
-    total    = sum(n),
-    healed   = sum(if_else(outcome == "Healed", n, 0)),
-    pct_heal = healed / total * 100,
-    .groups  = "drop"
-  )
-
-# 3. Plot
-ggplot(waffle_data, aes(values = n, fill = outcome)) +
-  geom_waffle(
-    n_rows = 6,
-    size   = 0.3,       # thickness of the border
-    colour = "black"    # black outline around every square
-  ) +
-  facet_grid(wound ~ fish) +
-  scale_fill_manual(
-    values = c(
-      "Healed"     = "#2b4b52",
-      "Not Healed" = "white"    # white fill = “empty” box
-    ),
-    guide = guide_legend(title = "Outcome")
-  ) +
-  geom_text(
-    data = pct,
-    aes(x = Inf, y = Inf, label = paste0(round(pct_heal), "%")),
-    hjust = 1.1, vjust = 1.5,
-    size = 5, fontface = "bold",
-    inherit.aes = FALSE
-  ) +
-  labs(
-    title    = "Wound Closure Outcomes by Treatment",
-    subtitle = "Each square = one coral fragment"
-  ) +
-  theme_void(base_size = 14) +
-  theme(
-    strip.text      = element_text(face = "bold", size = 12),
-    legend.position = "bottom",
-    plot.title      = element_text(face = "bold", size = 16),
-    plot.subtitle   = element_text(size = 14)
-  )
-
-
-# --------------------------------------------
-# 3. Save with optimal figure size
-# --------------------------------------------
-
-ggsave(here("figures","wound_closure", "wound_closure_waffle_manuscript_final.pdf"),
-       width = 6, height = 6, bg="white",dpi=150)
-
-
+print(p1)
+ggsave(here("figures","wound_closure_binary_bar.png"), p1, width = 6, height = 5, dpi = 600)
 ```
+
+# ===============================
+# Visualization 2: Percent Healed by Fish × Wound
+# ===============================
+# Purpose:
+#   Displays continuous outcome (% healed) as boxplots across treatments.
+# Design:
+#   - Boxplots to show variation and distribution within groups.
+#   - X-axis = fish presence, fill = wound size.
+# Interpretation:
+#   Median and spread highlight differences in healing depending on treatment.
+# Reproducibility:
+#   Figure dimensions and dpi matched across all outputs for consistency.
+## Prop final wound size by fish and wound
+```{r}
+## Publication-quality Visualization 2
+p2 <- ggplot(percent_closure, aes(fish, prop_remaining, fill = wound)) +
+  geom_boxplot(outlier.shape = 21, outlier.fill = NA) +
+  labs(
+    x = "Fish Presence",
+    y = "Proportion Remaining (0–1)",
+    fill = "Wound Size",
+    title = "Final Percent Healed as a Function of Fish Presence",
+    subtitle = "Grouped by Wound Size"
+  ) +
+  scale_fill_manual(values = wound_palette) +
+  coord_cartesian(ylim = c(0, 1))
+p2 <- p2 +
+  theme_bw(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 16, face = "bold"),
+    axis.text = element_text(size = 14),
+    legend.position = "top",
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 12)
+  )
+print(p2)
+ggsave(here("figures","prop_remaining_boxplot.png"), p2, width = 6, height = 5, dpi = 600)
+```
+
+# ===============================
+# Visualization 3: Proportion Healed by Wound Size
+# ===============================
+# Purpose:
+#   Flips perspective of Visualization 1 — now wound size is the x-axis,
+#   colored by fish presence.
+# Design:
+#   - Bar chart with dodge, fill = fish presence.
+#   - Colors harmonized with palette defined in aesthetics.
+# Interpretation:
+#   Directly compares fish effect across small vs. large wounds.
+# Reproducibility:
+#   Exported as high-resolution PNG for consistency with other figures.
+## Wound Prop by Wound Size -- colored by fish presence
+```{r}
+## Publication-quality Visualization 3
+p3 <- ggplot(wound_prop, aes(wound, prop_healed, fill = fish)) +
+  geom_col(position = "dodge") +
+  labs(
+    x = "Wound Size",
+    y = "Proportion Healed (0–1)",
+    fill = "Fish Presence",
+    title = "Proportion of Healed Wounds as a Function of Wound Size",
+    subtitle = "Grouped by Fish Presence"
+  ) +
+  scale_fill_manual(values = fish_palette)
+p3 <- p3 +
+  theme_bw(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 16, face = "bold"),
+    axis.text = element_text(size = 14),
+    legend.position = "top",
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 12)
+  )
+print(p3)
+ggsave(here("figures","healing_rate_bar.png"), p3, width = 6, height = 5, dpi = 600)
+
+# ===============================
+# Alternate Visualizations (Waffle Plots)
+# ===============================
+# Purpose:
+#   Alternative way of showing wound closure outcomes, where each square
+#   represents an individual coral fragment.
+# Notes:
+#   - Currently commented out: retained for reference/exploration.
+#   - Not used in manuscript figures but provides a granular visualization.
+# Reproducibility:
+#   Clear separation of manuscript-ready vs. exploratory plots.
+# Alternate manual waffle grid approach (commented out for manuscript — retained here for reference)
+# # Load libraries
+# library(tidyverse)
+# library(here)
+#
+# # --------------------------------------------
+# # 1. Prep waffle grid
+# # --------------------------------------------
+#
+# wound_counts_long <- wound_closure_clean %>%
+#   mutate(outcome = ifelse(wound_close == "Yes", "Healed", "Not Healed")) %>%
+#   group_by(wound, fish, outcome) %>%
+#   summarise(n = n(), .groups = "drop")
+#
+# waffle_grid <- wound_counts_long %>%
+#   uncount(n)
+#
+# waffle_grid <- waffle_grid %>%
+#   group_by(wound, fish, outcome) %>%
+#   mutate(id = row_number()) %>%
+#   group_by(wound, fish) %>%
+#   mutate(square_y = row_number()) %>%
+#   ungroup()
+#
+# waffle_grid <- waffle_grid %>%
+#   mutate(group_id = paste(fish, wound, sep = " - ")) %>%
+#   mutate(group_id = factor(group_id, 
+#                             levels = c("Fish - Large", "No Fish - Large", "Fish - Small", "No Fish - Small"))) 
+#
+# # --------------------------------------------
+# # 2. Plot with fully adjusted aesthetics
+# # --------------------------------------------
+#
+# ggplot(waffle_grid, aes(x = group_id, y = square_y)) +
+#   geom_tile(aes(fill = outcome), width = 0.8, height = 0.8, color = "black", linewidth = 0.3) +
+#   scale_fill_manual(values = c("Healed" = "black", "Not Healed" = "white")) +
+#   labs(
+#     title = "Wound Closure Outcomes by Treatment",
+#     subtitle = "Each square = 1 coral fragment",
+#     x = NULL, y = NULL, fill = "Wound Closure"
+#   ) +
+#   scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+#   scale_x_discrete(labels = c("Fish - Large", "No Fish - Large", "Fish - Small", "No Fish - Small")) +
+#   coord_cartesian(clip = "off") +
+#   theme_bw(base_size = 14) +
+#   theme(
+#     axis.text.x = element_text(size = 14, vjust = 2),
+#     axis.text.y = element_blank(),
+#     axis.ticks = element_blank(),
+#     panel.grid = element_blank(),
+#     legend.position = "right",
+#     legend.title = element_text(size = 14),
+#     legend.text = element_text(size = 13),
+#     plot.title = element_text(size = 18, face = "bold"),
+#     plot.subtitle = element_text(size = 15),
+#     plot.margin = margin(10, 10, 10, 10)
+#   )
+#
+#
+#
+#
+# # 1. Summarize counts
+# waffle_data <- wound_closure_clean %>%
+#   mutate(outcome = ifelse(wound_close == "Yes", "Healed", "Not Healed"),
+#          # reorder fish so No Fish is left, Fish is right
+#          fish    = factor(fish, levels = c("No Fish", "Fish"))
+#   ) %>%
+#   count(fish, wound, outcome)
+#
+# # 2. Compute per‐group percent healed
+# pct <- waffle_data %>%
+#   group_by(fish, wound) %>%
+#   summarise(
+#     total    = sum(n),
+#     healed   = sum(if_else(outcome == "Healed", n, 0)),
+#     pct_heal = healed / total * 100,
+#     .groups  = "drop"
+#   )
+#
+# # 3. Plot with facets: No Fish on left, Fish on right
+# library(waffle)    
+# library(ggplot2)
+# library(dplyr)
+#
+# # 1. Summarize counts
+# waffle_data <- wound_closure_clean %>%
+#   mutate(outcome = ifelse(wound_close == "Yes", "Healed", "Not Healed"),
+#          fish    = factor(fish, levels = c("No Fish", "Fish"))
+#   ) %>%
+#   count(fish, wound, outcome)
+#
+# # 2. Compute per‐group percent healed for annotation
+# pct <- waffle_data %>%
+#   group_by(fish, wound) %>%
+#   summarise(
+#     total    = sum(n),
+#     healed   = sum(if_else(outcome == "Healed", n, 0)),
+#     pct_heal = healed / total * 100,
+#     .groups  = "drop"
+#   )
+#
+# # 3. Plot
+# ggplot(waffle_data, aes(values = n, fill = outcome)) +
+#   geom_waffle(
+#     n_rows = 6,
+#     size   = 0.3,       # thickness of the border
+#     colour = "black"    # black outline around every square
+#   ) +
+#   facet_grid(wound ~ fish) +
+#   scale_fill_manual(
+#     values = c(
+#       "Healed"     = "#2b4b52",
+#       "Not Healed" = "white"    # white fill = “empty” box
+#     ),
+#     guide = guide_legend(title = "Outcome")
+#   ) +
+#   geom_text(
+#     data = pct,
+#     aes(x = Inf, y = Inf, label = paste0(round(pct_heal), "%")),
+#     hjust = 1.1, vjust = 1.5,
+#     size = 5, fontface = "bold",
+#     inherit.aes = FALSE
+#   ) +
+#   labs(
+#     title    = "Wound Closure Outcomes by Treatment",
+#     subtitle = "Each square = one coral fragment"
+#   ) +
+#   theme_void(base_size = 14) +
+#   theme(
+#     strip.text      = element_text(face = "bold", size = 12),
+#     legend.position = "bottom",
+#     plot.title      = element_text(face = "bold", size = 16),
+#     plot.subtitle   = element_text(size = 14)
+#   )
+#
+#
+# # --------------------------------------------
+# # 3. Save with optimal figure size
+# # --------------------------------------------
+#
+# ggsave(here("figures","wound_closure", "wound_closure_waffle_manuscript_final.pdf"),
+#        width = 6, height = 6, bg="white",dpi=150)
+
+
+ggsave(
+  here("figures","wound_closure_waffle.png"),
+  width = 8, height = 6, dpi = 300, bg = "white"
+)
+```
+
+# ===============================
+# Chunk 5: Models for Binary Wound Healing
+# ===============================
+# Purpose:
+#   Fit binomial GLMMs to test whether fish presence and/or wound size
+#   affect the probability of wound closure (Yes/No).
+#
+# Approach:
+#   - Response variable: wound_bin (1 = healed, 0 = not healed)
+#   - Predictors: fish presence, wound size, and their interaction
+#   - Random effect: tank (accounts for non-independence within tanks)
+#
+# Models Fit:
+#   1. mod_int       = fish × wound + (1|tank) interaction model
+#   2. mod_add       = additive model (fish + wound + random tank)
+#   3. mod_fish      = fish only
+#   4. mod_wound     = wound only
+#   5. mod_null      = intercept-only with tank random effect
+#
+# Comparisons:
+#   - Likelihood ratio tests (LRT) compare nested models
+#   - Results presented in a formatted gt table for clarity
+#
+# Interpretation:
+#   Significant p-values (p < 0.05) indicate that fish presence,
+#   wound size, or their interaction significantly affects binary healing.
+#
+# Reproducibility:
+#   Each model is printed with `summary()` for transparency.
+#   LRT results saved as HTML (for manuscript or reporting).
+
 # Models for healed/not healed
 
 ## Creating lmer models
 ```{r}
-mod_int <- glmer(wound_binary ~ fish * wound + (1 | tank), family = binomial, data = wound_closure_glm)
+mod_int <- glmer(wound_bin ~ fish * wound + (1 | tank), family = binomial, data = wound_closure_glm)
+summary(mod_int)
 # anova(fish_glm, type="II", test.statistic="F")
 
-
-mod_add <- glmer(wound_binary ~ fish + wound + (1|tank) , family = binomial, data = wound_closure_glm)
+mod_add <- glmer(wound_bin ~ fish + wound + (1|tank) , family = binomial, data = wound_closure_glm)
+summary(mod_add)
 # anova(wound_glm, test = "Chisq")
 
-mod_fish <- glmer(wound_binary ~ fish + (1| tank), family = binomial, data = wound_closure_glm )
+mod_fish <- glmer(wound_bin ~ fish + (1| tank), family = binomial, data = wound_closure_glm )
+summary(mod_fish)
 # anova(fish_glmer, type="II", test.statistic="F")
 
-mod_wound <- glmer(wound_binary ~ wound + (1|tank), family = binomial, data = wound_closure_glm)
+mod_wound <- glmer(wound_bin ~ wound + (1|tank), family = binomial, data = wound_closure_glm)
+summary(mod_wound)
 
-mod_null <- glmer(wound_binary ~ 1 + (1|tank), family = binomial, data = wound_closure_glm)
+mod_null <- glmer(wound_bin ~ 1 + (1|tank), family = binomial, data = wound_closure_glm)
+summary(mod_null)
 
 ```
 
@@ -321,7 +491,7 @@ lrt_wound <- anova(mod_fish, mod_add, test = "Chisq")
 
 ## Likelihood table
 ```{r}
-lrt_table <- tibble(
+lrt_table_bin <- tibble(
   Test = c("Interaction (Fish × Wound)", "Fish Effect", "Wound Effect"),
   ChiSq = c(
     lrt_interaction$Chisq[2],
@@ -342,10 +512,10 @@ lrt_table <- tibble(
   mutate(across(where(is.numeric), round, 3))
 
 # Format with gt
-lrt_table %>%
+gt_table_bin <- lrt_table_bin %>%
   gt() %>%
   tab_header(
-    title = "Table #. Likelihood Ratio Tests for Effects on wound healing",
+    title = "Table #. Likelihood Ratio Tests for Effects on Binary Wound Healing",
     #subtitle = paste("Scaled growth:", expression((final - initial)/initial^b))
   ) %>%
   cols_label(
@@ -360,47 +530,84 @@ lrt_table %>%
     heading.title.font.size = 16,
     heading.subtitle.font.size = 13
   )
+print(gt_table_bin)
+gtsave(gt_table_bin, here("figures","lrt_table_bin.html"))
+# Interpretation note:
+# Significant p-values (p < 0.05) indicate an effect of fish presence or wound size on binary wound healing.
 ```
+
+# ===============================
+# Chunk 6: Models for Proportion of Wound Remaining
+# ===============================
+# Purpose:
+#   Use beta regression to analyze the continuous outcome
+#   (proportion of wound remaining) after the experiment.
+#
+# Approach:
+#   - Response variable: prop_remaining (bounded 0–1)
+#   - Predictors: fish presence, wound size, and their interaction
+#   - Random effect: tank
+#   - Zero-inflation model: accounts for exact 0 or 1 values
+#
+# Models Fit:
+#   1. mod_full           = fish × wound interaction (zero-inflated)
+#   2. mod_no_interaction = additive fish + wound
+#   3. mod_no_fish        = wound only
+#   4. mod_no_wound       = fish only
+#
+# Comparisons:
+#   - Likelihood ratio tests (LRT) compare nested models
+#   - Results formatted with gt for readability
+#
+# Interpretation:
+#   Significant p-values highlight whether fish presence, wound size,
+#   or their interaction affect the final proportion of wound remaining.
+#
+# Reproducibility:
+#   - All models use glmmTMB with beta_family(link = "logit").
+#   - Ensure zero-inflation handled explicitly.
+#   - Tables and summaries can be saved for reporting.
 
 # Models for final proportion of wound remaining
 #simultaneous model comparisons - best model?
 ```{r}
 mod_full <- glmmTMB(
-  prop_wound_remaining ~ fish * wound + (1 | tank),
+  prop_remaining ~ fish * wound + (1 | tank),
   ziformula = ~ fish * wound,
   data = percent_closure,
   family = beta_family(link = "logit")
 )
-
+summary(mod_full)
 
 mod_no_interaction <- glmmTMB(
-  prop_wound_remaining ~ fish + wound + (1 | tank),  # 
+  prop_remaining ~ fish + wound + (1 | tank),  # 
   ziformula = ~ fish + wound ,                         # 
   data = percent_closure,
   family = beta_family(link = "logit")
 )
-
+summary(mod_no_interaction)
 
 mod_no_fish <- glmmTMB(
-  prop_wound_remaining ~ wound + (1 | tank),  # 
+  prop_remaining ~ wound + (1 | tank),  # 
   ziformula = ~ wound ,                         # 
   data = percent_closure,
   family = beta_family(link = "logit")
 )
+summary(mod_no_fish)
 
 mod_no_wound <- glmmTMB(
-  prop_wound_remaining ~ fish + (1 | tank),  
+  prop_remaining ~ fish + (1 | tank),  
   ziformula = ~ fish ,                         # 
   data = percent_closure,
   family = beta_family(link = "logit")
 )
-
+summary(mod_no_wound)
 
 lrt_interaction_zero <- anova(mod_no_interaction, mod_full, test = "Chisq")
 lrt_fish_zero <- anova(mod_no_fish, mod_no_interaction, test = "Chisq")
 lrt_wound_zero <- anova(mod_no_wound, mod_no_interaction, test = "Chisq")
 
-lrt_table <- tibble(
+lrt_table_prop <- tibble(
   Test = c("Interaction (Fish × Wound)", "Fish Effect", "Wound Effect"),
   ChiSq = c(lrt_interaction_zero$Chisq[2],
             lrt_fish_zero$Chisq[2],
@@ -414,7 +621,7 @@ lrt_table <- tibble(
 ) %>%
   mutate(across(where(is.numeric), round, 3))
 
-lrt_table %>%
+gt_table_prop <- lrt_table_prop %>%
   gt() %>%
   tab_header(
     title = "Table #. Likelihood Ratio Tests for Effects on wound healing",
@@ -432,8 +639,41 @@ lrt_table %>%
     heading.title.font.size = 16,
     heading.subtitle.font.size = 13
   )
-
+print(gt_table_prop)
+gtsave(gt_table_prop, here("figures","lrt_table_prop.html"))
 ```
+
+ # ===============================
+ # Chunk 7: Models for Healing Rate
+ # ===============================
+ # Purpose:
+ #   Assess how fish presence and wound size affect the *rate of healing*,
+ #   modeled as a continuous outcome variable.
+ #
+ # Approach:
+ #   - Response variable: healing_rate (continuous)
+ #   - Predictors: fish presence, wound size, and their interaction
+ #   - Random effect: tank (accounts for repeated measures / shared environment)
+ #
+ # Models Fit:
+ #   1. rate_full           = fish × wound interaction
+ #   2. rate_no_interaction = additive model (fish + wound)
+ #   3. rate_no_fish        = wound only
+ #   4. rate_no_wound       = fish only
+ #
+ # Comparisons:
+ #   - Likelihood ratio tests (LRT) compare nested models
+ #   - Results summarized in a formatted gt table
+ #
+ # Interpretation:
+ #   - Significant fish or wound effects → these factors drive variation in healing rate
+ #   - Significant interaction → effect of fish differs depending on wound size
+ #
+ # Reproducibility:
+ #   - Each model is summarized with `summary()` to inspect coefficients
+ #   - R² values (marginal and conditional) are extracted to assess variance explained
+ #   - GT tables saved to `figures/` for consistent reporting
+
 
 # Models for healing rate
 ## Creating the Models
@@ -442,30 +682,32 @@ rate_full <- lmer(
   healing_rate ~ fish * wound + (1 | tank),
   data = percent_closure
 )
-
+summary(rate_full)
 
 rate_no_interaction <- lmer(
-  healing_rate ~ fish + wound + (1 | tank),   
+  healing_rate ~ fish + wound + (1 | tank),
   data = percent_closure
 )
-
+summary(rate_no_interaction)
 
 rate_no_fish <- lmer(
-  healing_rate ~ wound + (1 | tank),   
+  healing_rate ~ wound + (1 | tank),
   data = percent_closure
 )
+summary(rate_no_fish)
 
 rate_no_wound <- lmer(
-  healing_rate ~ fish + (1 | tank),  
+  healing_rate ~ fish + (1 | tank),
   data = percent_closure
 )
+summary(rate_no_wound)
 
-
+# Likelihood ratio tests for healing rate
 lrt_interaction_zero_rate <- anova(rate_no_interaction, rate_full, test = "Chisq")
 lrt_fish_zero_rate <- anova(rate_no_fish, rate_no_interaction, test = "Chisq")
 lrt_wound_zero_rate <- anova(rate_no_wound, rate_no_interaction, test = "Chisq")
 
-lrt_table <- tibble(
+lrt_table_rate <- tibble(
   Test = c("Interaction (Fish × Wound)", "Fish Effect", "Wound Effect"),
   ChiSq = c(lrt_interaction_zero_rate$Chisq[2],
             lrt_fish_zero_rate$Chisq[2],
@@ -479,10 +721,11 @@ lrt_table <- tibble(
 ) %>%
   mutate(across(where(is.numeric), round, 3))
 
-lrt_table %>%
+# Format with gt
+gt_table_rate <- lrt_table_rate %>%
   gt() %>%
   tab_header(
-    title = "Table #. Likelihood Ratio Tests for Effects on Healing Rate",
+    title = "Table #. Likelihood Ratio Tests for Effects on Healing Rate"
   ) %>%
   cols_label(
     Test = "Model Comparison",
@@ -496,63 +739,302 @@ lrt_table %>%
     heading.title.font.size = 16,
     heading.subtitle.font.size = 13
   )
+
+print(gt_table_rate)
+gtsave(gt_table_rate, here("figures","lrt_table_rate.html"))
+
+# Interpretation note:
+# Significant p-values (p < 0.05) indicate an effect of fish presence or wound size on healing rate.
 ```
 
+# --------------------------------------------
+# Diagnostics for Healing Rate Models
+# --------------------------------------------
+
+```{r}
+library(DHARMa)
+library(patchwork)
+
+## 1. Residual diagnostics for full model
+sim_rate_full <- simulateResiduals(fittedModel = rate_full, n = 1000)
+p_dharma_full <- plot(sim_rate_full)   # QQ-plot, residual vs fitted, outliers
+ggsave(
+  here("figures", "diagnostics", "sim_rate_full.png"),
+  p_dharma_full,
+  width = 7, height = 6, dpi = 300
+)
+
+# Optional: test for dispersion and zero-inflation
+cat("\nDispersion test for full model:\n")
+print(testDispersion(sim_rate_full))
+cat("\nZero-inflation test for full model:\n")
+print(testZeroInflation(sim_rate_full))
+
+## 2. Compare residuals across all candidate models
+model_list <- list(
+  Full = rate_full,
+  NoInteraction = rate_no_interaction,
+  NoFish = rate_no_fish,
+  NoWound = rate_no_wound
+)
+
+for (nm in names(model_list)) {
+  cat("\n---- Diagnostics for", nm, "model ----\n")
+  sim <- simulateResiduals(model_list[[nm]], n = 1000)
+  p <- plot(sim)
+  ggsave(
+    here("figures", "diagnostics", paste0("resid_", nm, ".png")),
+    p,
+    width = 7, height = 6, dpi = 300
+  )
+}
+
+## 3. Predicted vs observed scatterplot
+percent_closure$pred_full <- predict(rate_full)
+
+p_fit <- ggplot(percent_closure, aes(x = pred_full, y = healing_rate)) +
+  geom_point(color = "steelblue", size = 2, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = "darkred") +
+  labs(
+    x = "Predicted Healing Rate",
+    y = "Observed Healing Rate",
+    title = "Model Fit Check: rate_full"
+  ) +
+  theme_bw(base_size = 14)
+
+print(p_fit)
+ggsave(
+  here("figures", "diagnostics", "fit_scatterplot.png"),
+  p_fit,
+  width = 7, height = 6, dpi = 300
+)
+
+## 4. Publication-quality residuals panel
+# Explicit ggplot diagnostics for residuals
+p_resid_plot <- ggplot(
+  data.frame(resid = residuals(rate_full, type = "pearson")),
+  aes(x = seq_along(resid), y = resid)
+) +
+  geom_point(alpha = 0.6) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  theme_minimal() +
+  labs(title = "Pearson Residuals", x = "Observation", y = "Residual")
+
+p_fit_plot <- ggplot(
+  data.frame(fitted = fitted(rate_full),
+             resid = residuals(rate_full, type = "pearson")),
+  aes(x = fitted, y = resid)
+) +
+  geom_point(alpha = 0.6) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  theme_minimal() +
+  labs(title = "Residuals vs Fitted", x = "Fitted values", y = "Residuals")
+
+# Combine into panel
+p_resid_panel <- (p_resid_plot | p_fit_plot) +
+  plot_annotation(
+    title = "Residual Diagnostics for Healing Rate Models",
+    theme = theme(plot.title = element_text(size = 18, face = "bold"))
+  )
+
+# Save panel
+ggsave(
+  here("figures","diagnostics","healing_rate_diagnostics_panel.png"),
+  p_resid_panel,
+  width = 10, height = 5, dpi = 300, bg = "white"
+)
+```
+
+
+## Publication-quality Visualization: Healing Rate by Fish × Wound
+```{r}
+## Publication-quality Visualization: Healing Rate by Fish × Wound
+library(ggbeeswarm)   # better jitter (quasirandom) for raw data
+
+p_rate <- ggplot(percent_closure, aes(fish, healing_rate, fill = wound)) +
+  # Violin plot to show distribution
+  geom_violin(trim = FALSE, alpha = 0.5, color = NA, width = 0.9) +
+  # Boxplot for medians and IQR
+  geom_boxplot(width = 0.25, outlier.shape = NA, alpha = 0.8, position = position_dodge(width = 0.9)) +
+  # Raw datapoints (jittered)
+  geom_quasirandom(aes(color = wound), size = 1.8, alpha = 0.7, dodge.width = 0.9) +
+  # Labels and titles
+  labs(
+    x = "Fish Presence",
+    y = "Healing Rate (units/day)",
+    fill = "Wound Size",
+    color = "Wound Size",
+    title = "Healing Rate by Fish Presence and Wound Size",
+    subtitle = "Violin + boxplot + raw data points"
+  ) +
+  # Nicer palette
+  scale_fill_manual(values = c("Small" = "#FFC857", "Large" = "#4C78A8")) +
+  scale_color_manual(values = c("Small" = "#FFC857", "Large" = "#4C78A8")) +
+  # Theme for clarity
+  theme_bw(base_size = 16) +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 14),
+    legend.position = "top",
+    legend.title = element_text(size = 15, face = "bold"),
+    legend.text = element_text(size = 13),
+    plot.title = element_text(size = 20, face = "bold"),
+    plot.subtitle = element_text(size = 15)
+  )
+
+print(p_rate)
+
+ggsave(
+  here("figures", "healing_rate_violin_boxplot_points.png"),
+  p_rate,
+  width = 7, height = 6, dpi = 600, bg = "white"
+)
+```
+
+## Publication-quality Visualization: Interaction Effect
+# This plot highlights the interaction between fish presence and wound size
+# by showing estimated marginal means (predicted healing rates with CI).
+```{r}
+library(ggeffects)
+
+# Get predicted values from the full model
+pred_rate <- ggpredict(rate_full, terms = c("fish", "wound"))
+
+p_rate_interaction <- ggplot(pred_rate, aes(x = x, y = predicted,
+                                            color = group, group = group)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.1) +
+  labs(
+    x = "Fish Presence",
+    y = "Predicted Healing Rate (units/day)",
+    color = "Wound Size",
+    title = "Interaction Plot: Fish × Wound Effects on Healing Rate",
+    subtitle = "Model-based predictions with 95% CI"
+  ) +
+  scale_color_manual(values = c("Small" = "#FFC857", "Large" = "#4C78A8")) +
+  theme_bw(base_size = 16) +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 14),
+    legend.position = "top",
+    legend.title = element_text(size = 15, face = "bold"),
+    legend.text = element_text(size = 13),
+    plot.title = element_text(size = 20, face = "bold"),
+    plot.subtitle = element_text(size = 15)
+  )
+
+print(p_rate_interaction)
+
+ggsave(
+  here("figures", "healing_rate_interaction_plot.png"),
+  p_rate_interaction,
+  width = 7, height = 6, dpi = 600, bg = "white"
+)
+```
+
+  # ===============================
+  # Chunk 8: Model Fit and R² Values
+  # ===============================
+  # Purpose:
+  #   Evaluate overall model performance and variance explained
+  #   for the healing rate mixed models.
+  #
+  # Approach:
+  #   - Use MuMIn::r.squaredGLMM() to extract:
+  #       * Marginal R² = variance explained by fixed effects
+  #       * Conditional R² = variance explained by fixed + random effects
+  #
+  # Interpretation:
+  #   - Marginal R² shows contribution of predictors (fish, wound, interaction).
+  #   - Conditional R² includes tank-level variation.
+  #
+  # Reproducibility:
+  #   - Printing R² ensures results are visible in the knitted output.
+  #   - Useful for comparing models and justifying inclusion of predictors.
 ## R2 values
 
 ```{r}
 r2_full <- r.squaredGLMM(rate_full)
-
-r2_full
+print(r2_full)
 ```
 
 
+#
+# ===============================
+# Chunk 9: Exploratory / Rough Code
+# ===============================
+# Purpose:
+#   Test alternative model structures for wound healing outcomes.
+#   This section includes exploratory analyses that are *not finalized*
+#   for the manuscript but retained here for transparency and reproducibility.
+#
+# Approach:
+#   - Alternative GLMM and glmmTMB specifications for proportion healed
+#   - Variants of zero-inflated beta regression models
+#   - GAMLSS models (beta-inflated distributions) as robustness checks
+#
+# Notes:
+#   - Some models may not converge or may give counterintuitive results
+#   - AIC and likelihood comparisons are used for exploratory model selection
+#   - These analyses are labeled "rough" to clearly separate from
+#     the core manuscript-ready models
+#
+# Reproducibility:
+#   - Keep all exploratory models commented or clearly sectioned
+#   - Document reasons for discarding or mistrusting certain models
+#   - Useful for lab records and for re-examining decisions in the future
+#
 # Rough code
 
 ### figuring which model to use for final wound healing
 ```{r}
 #modeling proportion of the wound remaining at Tf, this gets around the 1 inflation, and allows for 0 inflation, which glmmTMB can deal with. 
-percent_closure$prop_wound_remaining <- 1 - percent_closure$prop
+percent_closure$prop_remaining <- 1 - percent_closure$prop
                               
 beta_mod <- glmmTMB(
-  prop_wound_remaining ~ fish * wound + (1 | tank),
+  prop_remaining ~ fish * wound + (1 | tank),
   ziformula = ~ fish * wound,
   data = percent_closure,
   family = beta_family(link = "logit")
 )
-
 summary(beta_mod)
 
 beta_mod_null<- glmmTMB(
-  prop_wound_remaining ~ fish * wound + (1 | tank),
+  prop_remaining ~ fish * wound + (1 | tank),
   ziformula = ~1,
   data = percent_closure,
   family = beta_family(link = "logit")
 )
+summary(beta_mod_null)
 
 beta_mod_fix<- glmmTMB(
-  prop_wound_remaining ~ fish * wound + (1 | tank),
+  prop_remaining ~ fish * wound + (1 | tank),
   ziformula = ~fish + wound,
   data = percent_closure,
   family = beta_family(link = "logit")
 )
+summary(beta_mod_fix)
 
 beta_mod_fish<- glmmTMB(
-  prop_wound_remaining ~ fish * wound + (1 | tank),
+  prop_remaining ~ fish * wound + (1 | tank),
   ziformula = ~fish,
   data = percent_closure,
   family = beta_family(link = "logit")
 )
-summary(beta_mod)
+summary(beta_mod_fish)
+
 AIC(beta_mod_null, beta_mod)
 AIC(beta_mod_fish, beta_mod_fix)
 
-summary(beta_mod_fish)
-summary(beta_mod_null)
 
 
 
-
+#
+# NOTE: The gamlss and gamlss.dist packages are required for the BEINF models below.
+# The setup chunk will attempt to install them if they are not already available.
 #GAMLSS analysis...I don't trust any of these models. Partly because I proabably don't understand and because they're not giving me the values I want :(
 beta_prop_1 <- gamlss(
   prop ~ fish * wound + random(tank),    
@@ -562,13 +1044,14 @@ beta_prop_1 <- gamlss(
   family   = BEINF,
   data     = percent_closure
 )
-
+summary(beta_prop_1)
 
 mod <- gamlss(
   prop ~ fish * wound + random(tank),
   family = BEINF,
   data = percent_closure
 )
+summary(mod)
 
 beta_prop_null <- gamlss(
   prop ~ fish * wound + random(tank),    
@@ -578,121 +1061,124 @@ beta_prop_null <- gamlss(
   family   = BEINF,
   data     = percent_closure
 )
-
 summary(beta_prop_null)
-summary(mod)
 
+# anova() is not supported for GAMLSS models with BEINF family; use AIC for model comparison instead.
+# Compare models using AIC for GAMLSS models (anova() not supported)
 AIC(beta_prop_1, beta_prop_null)
-anova(beta_prop_1, beta_prop_null)
 
 ```
 
 ### zero - model comparisons
 ```{r}
 mod_full_zero <- glmmTMB(
-  prop_wound_remaining ~ fish * wound + (1 | tank),
+  prop_remaining ~ fish * wound + (1 | tank),
   ziformula = ~ fish * wound,
   data = percent_closure,
   family = beta_family(link = "logit")
 )
-
-summary(mod_full)
+summary(mod_full_zero)
 
 mod_no_interaction_zero <- glmmTMB(
-  prop_wound_remaining ~ fish * wound + (1 | tank),  
+  prop_remaining ~ fish * wound + (1 | tank),  
   ziformula = ~ fish + wound,                         
   data = percent_closure,
   family = beta_family(link = "logit")
 )
+summary(mod_no_interaction_zero)
 
 mod_no_fish_zero <- glmmTMB(
-  prop_wound_remaining ~ fish * wound + (1 | tank),  
+  prop_remaining ~ fish * wound + (1 | tank),  
   ziformula = ~ wound,                      
   data = percent_closure,
   family = beta_family(link = "logit")
 )
+summary(mod_no_fish_zero)
 
 mod_no_wound_zero <- glmmTMB(
-  prop_wound_remaining ~ fish * wound + (1 | tank),  
+  prop_remaining ~ fish * wound + (1 | tank),  
   ziformula = ~ fish,                         
   data = percent_closure,
   family = beta_family(link = "logit")
 )
+summary(mod_no_wound_zero)
 
-lrt_interaction <- anova(mod_no_interaction_zero, mod_full_zero, test = "Chisq")
-lrt_fish <- anova(mod_no_fish_zero, mod_no_interaction_zero, test = "Chisq")
-lrt_wound <- anova(mod_no_wound_zero, mod_no_interaction_zero, test = "Chisq")
+lrt_interaction_exploratory1 <- anova(mod_no_interaction_zero, mod_full_zero, test = "Chisq")
+lrt_fish_exploratory1 <- anova(mod_no_fish_zero, mod_no_interaction_zero, test = "Chisq")
+lrt_wound_exploratory1 <- anova(mod_no_wound_zero, mod_no_interaction_zero, test = "Chisq")
 
-lrt_table <- tibble(
+lrt_table_exploratory1 <- tibble(
   Test = c("Interaction (Fish × Wound)", "Fish Effect", "Wound Effect"),
-  ChiSq = c(lrt_interaction$Chisq[2],
-            lrt_fish$Chisq[2],
-            lrt_wound$Chisq[2]),
-  Df = c(lrt_interaction$Df[2],
-         lrt_fish$Df[2],
-         lrt_wound$Df[2]),
-  p_value = c(lrt_interaction$`Pr(>Chisq)`[2],
-              lrt_fish$`Pr(>Chisq)`[2],
-              lrt_wound$`Pr(>Chisq)`[2])
+  ChiSq = c(lrt_interaction_exploratory1$Chisq[2],
+            lrt_fish_exploratory1$Chisq[2],
+            lrt_wound_exploratory1$Chisq[2]),
+  Df = c(lrt_interaction_exploratory1$Df[2],
+         lrt_fish_exploratory1$Df[2],
+         lrt_wound_exploratory1$Df[2]),
+  p_value = c(lrt_interaction_exploratory1$`Pr(>Chisq)`[2],
+              lrt_fish_exploratory1$`Pr(>Chisq)`[2],
+              lrt_wound_exploratory1$`Pr(>Chisq)`[2])
 ) %>%
   mutate(across(where(is.numeric), round, 3))
 
-lrt_table
+print(lrt_table_exploratory1)
 ```
 
 
 ### model comparisons with zero kept to fixed effects
 ```{r}
 mod_full <- glmmTMB(
-  prop_wound_remaining ~ fish * wound + (1 | tank),
+  prop_remaining ~ fish * wound + (1 | tank),
   ziformula = ~ fish + wound,
   data = percent_closure,
   family = beta_family(link = "logit")
 )
-
 summary(mod_full)
 
 mod_no_interaction <- glmmTMB(
-  prop_wound_remaining ~ fish + wound + (1 | tank),  
+  prop_remaining ~ fish + wound + (1 | tank),  
   ziformula = ~ fish + wound,                        
   data = percent_closure,
   family = beta_family(link = "logit")
 )
+summary(mod_no_interaction)
 
 # Remove fish effect
 mod_no_fish <- glmmTMB(
-  prop_wound_remaining ~ wound + (1 | tank),  
+  prop_remaining ~ wound + (1 | tank),  
   ziformula = ~ fish + wound,                         
   data = percent_closure,
   family = beta_family(link = "logit")
 )
+summary(mod_no_fish)
 
 # Remove wound effect
 mod_no_wound <- glmmTMB(
-  prop_wound_remaining ~ fish + (1 | tank),  
+  prop_remaining ~ fish + (1 | tank),  
   ziformula = ~ fish + wound,                         
   data = percent_closure,
   family = beta_family(link = "logit")
 )
+summary(mod_no_wound)
 
-lrt_interaction <- anova(mod_no_interaction, mod_full, test = "Chisq")
-lrt_fish <- anova(mod_no_fish, mod_no_interaction, test = "Chisq")
-lrt_wound <- anova(mod_no_wound, mod_no_interaction, test = "Chisq")
+lrt_interaction_exploratory2 <- anova(mod_no_interaction, mod_full, test = "Chisq")
+lrt_fish_exploratory2 <- anova(mod_no_fish, mod_no_interaction, test = "Chisq")
+lrt_wound_exploratory2 <- anova(mod_no_wound, mod_no_interaction, test = "Chisq")
 
-lrt_table <- tibble(
+lrt_table_exploratory2 <- tibble(
   Test = c("Interaction (Fish × Wound)", "Fish Effect", "Wound Effect"),
-  ChiSq = c(lrt_interaction$Chisq[2],
-            lrt_fish$Chisq[2],
-            lrt_wound$Chisq[2]),
-  Df = c(lrt_interaction$Df[2],
-         lrt_fish$Df[2],
-         lrt_wound$Df[2]),
-  p_value = c(lrt_interaction$`Pr(>Chisq)`[2],
-              lrt_fish$`Pr(>Chisq)`[2],
-              lrt_wound$`Pr(>Chisq)`[2])
+  ChiSq = c(lrt_interaction_exploratory2$Chisq[2],
+            lrt_fish_exploratory2$Chisq[2],
+            lrt_wound_exploratory2$Chisq[2]),
+  Df = c(lrt_interaction_exploratory2$Df[2],
+         lrt_fish_exploratory2$Df[2],
+         lrt_wound_exploratory2$Df[2]),
+  p_value = c(lrt_interaction_exploratory2$`Pr(>Chisq)`[2],
+              lrt_fish_exploratory2$`Pr(>Chisq)`[2],
+              lrt_wound_exploratory2$`Pr(>Chisq)`[2])
 ) %>%
   mutate(across(where(is.numeric), round, 3))
 
-lrt_table
+print(lrt_table_exploratory2)
 ```
 
