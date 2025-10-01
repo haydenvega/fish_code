@@ -29,7 +29,9 @@ library(ggpubr)
 #..........................loading data..........................
 pam_healed <- read.csv(here("data", "pam_healed.csv"))
 
-pam_undisturbed_healed <- read.csv(here("data", "pam_undisturbed_healed.csv"))
+pam_undisturbed_tissue_wound_no_wound <- read.csv(here("data", "pam_undisturbed_healed.csv"))
+
+pam_undisturbed_healed_tissue_wound_no_wound <- read.csv(here("data","pam_undisturbed_healed_tissue_wound_no_wound.csv"))
 
 #.......................loading aesthetics.......................
 wound_palette <- c("Large" = "#ffbf00", 
@@ -300,33 +302,197 @@ lrt_table %>%
   )
 ```
 
-# Old Code
+
+#Same analysis as above, but with non-wounded corals added to the data
+## Linear Models and Anova for Fv/Fm
+### Fitting Mixed Effect Models
+```{r}
+
+# Full Model
+rate_full_no_wound <- lmer(
+  fv_fm ~ fish * wound + (1 | tank),
+  data = pam_undisturbed_healed_tissue_wound_no_wound
+)
 
 
+rate_no_interaction_no_wound <- lmer(
+  fv_fm ~ fish + wound + (1 | tank),  # 
+  data = pam_undisturbed_healed_tissue_wound_no_wound
+)
+
+
+rate_no_fish_no_wound <- lmer(
+  fv_fm ~ wound + (1 | tank),  # 
+  data = pam_undisturbed_healed_tissue_wound_no_wound
+)
+
+rate_no_wound_no_wound <- lmer(
+  fv_fm ~ fish + (1 | tank),  
+  data = pam_undisturbed_healed_tissue_wound_no_wound
+)
+
+
+lrt_interaction_zero_rate_no_wound <- anova(rate_no_interaction_no_wound, rate_full_no_wound, test = "Chisq")
+lrt_fish_zero_rate_no_wound <- anova(rate_no_fish_no_wound, rate_no_interaction_no_wound, test = "Chisq")
+lrt_wound_zero_rate_no_wound <- anova(rate_no_wound_no_wound, rate_no_interaction_no_wound, test = "Chisq")
+
+lrt_table_fv_fm_all <- tibble(
+  Test = c("Interaction (Fish × Wound)", "Fish Effect", "Wound Effect"),
+  ChiSq = c(lrt_interaction_zero_rate_no_wound$Chisq[2],
+            lrt_fish_zero_rate_no_wound$Chisq[2],
+            lrt_wound_zero_rate_no_wound$Chisq[2]),
+  Df = c(lrt_interaction_zero_rate_no_wound$Df[2],
+         lrt_fish_zero_rate_no_wound$Df[2],
+         lrt_wound_zero_rate_no_wound$Df[2]),
+  p_value = c(lrt_interaction_zero_rate_no_wound$`Pr(>Chisq)`[2],
+              lrt_fish_zero_rate_no_wound$`Pr(>Chisq)`[2],
+              lrt_wound_zero_rate_no_wound$`Pr(>Chisq)`[2])
+) %>%
+  mutate(across(where(is.numeric), round, 3))
+
+# Format with gt
+lrt_table_fv_fm_all %>%
+  gt() %>%
+  tab_header(
+    title = "Table #. Likelihood Ratio Tests for Effects on Fv/Fm",
+    #subtitle = paste("Scaled growth:", expression((final - initial)/initial^b))
+  ) %>%
+  cols_label(
+    Test = "Model Comparison",
+    ChiSq = "Chi-squared",
+    Df = "Degrees of Freedom",
+    p_value = "P-value"
+  ) %>%
+  fmt_number(columns = vars(ChiSq, p_value), decimals = 3) %>%
+  tab_options(
+    table.font.size = 14,
+    heading.title.font.size = 16,
+    heading.subtitle.font.size = 13
+  )
+
+gtsave(
+  data = lrt_table %>% gt() %>% tab_header(title = "Likelihood Ratio Tests for fv/fm"),
+  filename = "C:/Users/vegah/OneDrive/Desktop/fish_code/fish_code/fish_code/figures/pam/fv_fm_lrt_table_all_wounds_included.html"
+)
+
+```
+## Averaging values for the above data
+```{r}
+# Wounds
+fv_fm_avg_wound <- pam_undisturbed_healed_tissue_wound_no_wound %>%
+  group_by(wound) %>%
+  summarize(mean_fv_fm = mean(fv_fm, na.rm = TRUE), 
+  sd_wound_rate = sd(fv_fm, na.rm = TRUE),
+            n = n()) 
+# small = 665.5 +/- 36.43
+# large = 658.7 +/- 36.86
+# NW = 684.7 +/- 11.64
+
+#Fish
+rate_avg_fish <- pam_undisturbed_healed_tissue_wound_no_wound %>% 
+  group_by(fish) %>% 
+  summarize(mean_fv_fm = mean(fv_fm, na.rm = TRUE), 
+  sd_fish_rate = sd(fv_fm, na.rm = TRUE), 
+            n = n())
+#no_fish = 657.9 */- 38.41
+#fish = 681.4 +/- 15.53
+
+# Interaction
+pam_avg <- pam_undisturbed_healed_tissue_wound_no_wound %>% 
+  group_by(fish, wound) %>% 
+  summarize(mean_fv_fm = mean(fv_fm, na.rm = TRUE), 
+            sd_both_rate = sd(fv_fm, na.rm = TRUE), 
+            n = n())
+# NF, S = 657.0, 43.46
+# NF, L = 633.1, 35.68
+#NF, NW = 683.5833, 12.06
+#F, S = 674.0, 27.001
+#F, L = 684.4, 11.62
+#F, NW = 685.9, 11.63
+```
+
+
+
+
+#Algae influences on fv/fm
+# Visualizing Corals with Algae
+```{r}
+ggplot(pam_healed, aes(x = algae, y = fv_fm, fill = fish))+
+  geom_boxplot()+
+  geom_jitter()
+
+ggplot(pam_healed, aes(x = algae, y = fv_fm, fill = wound))+
+  geom_boxplot()+
+  geom_jitter()
+
+#SUMMARY HERE IS THAT THERE ARE 1 FISH & ALGAE CORAL, 7 NO FISH AND ALGAE CORALS
+#OVERALL PHOTOSYNTHETIC EFFICIENCY IS LOWER, PROBABLY BECAUSE THEY'RE NO FISH
+#IF ALGAE DID PLAY A ROLE, THEN IT should BE HIGHER ? 
+
+```
+##Use models to determine if there is an algae effect
+```{r}
+# Full Model 
+mod_int_algae <- lmer(fv_fm ~ fish * wound * algae + (1 | tank), data = pam_healed)
+
+# Additive model without interaction
+mod_add_algae <- lmer(fv_fm ~ fish * wound + algae + (1 | tank), data = pam_healed)
+
+# Fish-only model
+mod_algae <- lmer(fv_fm ~ algae + (1 | tank), data = pam_healed)
+
+
+
+##LRT TESTS
+
+lrt_interaction_algae <- anova(mod_add, mod_int_algae, test = "Chisq")
+lrt_algae <- anova(mod_algae, mod_add_algae, test = "Chisq")
+
+view(lrt_algae)
+
+#NO SIGNIFICANT effect of algae p value = 0.106
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# OLD CODE
 
 ### Boxplot of Pam for undisturbed tissue
 ```{r}
 
 
-pam_undisturbed_healed %>% 
+pam_undisturbed_tissue_wound_no_wound %>% 
   ggplot(aes (x = fish, y = fv_fm, fill = fish)) +
   geom_boxplot()+
   theme_bw()
 
   ## Boxplot of PAM including x = wound and  fish = fill
-pam_undisturbed_healed %>% 
+pam_undisturbed_tissue_wound_no_wound %>% 
   ggplot (aes (x = wound, y = fv_fm, fill = fish))+
   geom_boxplot()+
   theme_bw()
 
   ## Boxplot of PAM including x = fish and fill = wound
 
-pam_undisturbed_healed %>% 
+pam_undisturbed_tissue_wound_no_wound %>% 
   ggplot (aes (x = fish, y = fv_fm, fill = wound))+
   geom_boxplot()+
   theme_bw()
 
-pam_undisturbed_healed %>% 
+pam_undisturbed_tissue_wound_no_wound %>% 
   ggplot (aes (x = wound, y = fv_fm, fill = wound))+
   geom_boxplot()+
   theme_bw()
@@ -367,7 +533,7 @@ pam_healed %>%
 ### Multiple Regression
 
 ```{r}
-pam_all_regression <- lmer(fv_fm ~ wound + fish + (1 | f0), data = pam_undisturbed_healed)
+pam_all_regression <- lmer(fv_fm ~ wound + fish + (1 | f0), data = pam_undisturbed_tissue_wound_no_wound)
 summary(pam_all_regression)
 anova(pam_all_regression)
 
@@ -378,7 +544,7 @@ anova(pam_healed_regression)
 
 ### Anova
 ```{r}
-pam_all_anova <- aov(fv_fm ~ wound * fish, data = pam_undisturbed_healed)
+pam_all_anova <- aov(fv_fm ~ wound * fish, data = pam_undisturbed_tissue_wound_no_wound)
 
 summary(pam_all_anova)
 
@@ -413,7 +579,7 @@ pam_all_predictions <- ggpredict(pam_all_regression, terms = c("wound", "fish"))
 pam_all_plot <- ggplot() +
   
   # plot the raw data as points
-  geom_point(data = pam_undisturbed_healed,
+  geom_point(data = pam_undisturbed_tissue_wound_no_wound,
              aes(x = wound,
                  y = fv_fm),
              alpha = 0.5,
@@ -454,7 +620,7 @@ pam_all_plot
 ### Plot TUKEY
 
 ```{r  fig.width = 20, fig.height = 40}
-tukey_plot_all <- aov(fv_fm ~ wound:fish, data = pam_undisturbed_healed)
+tukey_plot_all <- aov(fv_fm ~ wound:fish, data = pam_undisturbed_tissue_wound_no_wound)
 
 tukey_plot_all_plot <- TukeyHSD(tukey_plot_all)
 plot(tukey_plot_all_plot)

@@ -789,6 +789,40 @@ ggplot(plot_data, aes(x = timepoint, y = wound_size,
     plot.title = element_text(size = 20, face = "bold"),
     plot.subtitle = element_text(size = 15)
   )
+
+
+```
+
+##Average values for healing rate, organized by variables
+```{r}
+# Wounds
+rate_avg_wound <- percent_closure %>%
+  group_by(wound) %>%
+  summarize(mean_healing_rate = mean(healing_rate, na.rm = TRUE), 
+  sd_wound_rate = sd(healing_rate, na.rm = TRUE),
+            n = n()) 
+# small = 0.068 +/- 0.20
+# large = 0.17 +/- 0.067
+
+#Fish
+rate_avg_fish <- percent_closure %>% 
+  group_by(fish) %>% 
+  summarize(mean_healing_rate = mean(healing_rate, na.rm = TRUE), 
+  sd_fish_rate = sd(healing_rate, na.rm = TRUE), 
+            n = n())
+#no_fish = 0.0957, 38.41
+#fish = 0.0759, 18.53
+
+# Interaction
+pam_avg <- percent_closure %>% 
+  group_by(fish, wound) %>% 
+  summarize(mean_healing_rate = mean(healing_rate, na.rm = TRUE), 
+            sd_both_rate = sd(healing_rate, na.rm = TRUE), 
+            n = n())
+# NF, S = 0.0570, 0.0114
+# NF, L = 0.131, 0.0586
+#F, S = 0.0785, 0.0208
+#F, L = 0.204, 0.0553
 ```
 
 # --------------------------------------------
