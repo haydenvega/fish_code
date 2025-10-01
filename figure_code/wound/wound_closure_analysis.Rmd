@@ -810,8 +810,8 @@ rate_avg_fish <- percent_closure %>%
   summarize(mean_healing_rate = mean(healing_rate, na.rm = TRUE), 
   sd_fish_rate = sd(healing_rate, na.rm = TRUE), 
             n = n())
-#no_fish = 0.0957, 38.41
-#fish = 0.0759, 18.53
+#no_fish = 0.0957, 0.05664
+#fish = 0.141, 0.07587
 
 # Interaction
 pam_avg <- percent_closure %>% 
