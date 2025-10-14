@@ -144,7 +144,19 @@ showtext_auto()
 theme_set(theme_bw() +
             theme(panel.grid = element_blank(), 
                   plot.background = element_blank()))
+
+
 ```
+
+## Defining Large or Small
+```{r}
+wounds_avgs <- percent_closure %>%
+  group_by(wound) %>%
+  summarize(mean_initial_large = mean(initial_wound_size_cm, na.rm = TRUE), 
+  sd_wound_rate = sd(initial_wound_size_cm, na.rm = TRUE),
+            n = n())
+```
+
 # Initial Plotting
 
 # ===============================
@@ -747,7 +759,10 @@ gtsave(gt_table_rate, here("figures","lrt_table_rate.html"))
 
 # Interpretation note:
 # Significant p-values (p < 0.05) indicate an effect of fish presence or wound size on healing rate.
+```
 
+## Plot for healing rate trajectories by wound and fish
+```{r}
 library(ggplot2)
 library(dplyr)
 
@@ -769,7 +784,7 @@ ggplot(plot_data, aes(x = timepoint, y = wound_size,
   stat_summary(aes(group = fish),
                fun = mean, geom = "line", size = 1.5,
                position = position_dodge(width = 0.3)) +
-  facet_wrap(~ wound, scales = "free_y") +
+  facet_wrap(~ wound) + #removed free_y
   scale_color_manual(values = c("No Fish" = "#ad301a", "Fish" = "#2b4b52")) +
   labs(
     x = "Timepoint",
@@ -789,8 +804,89 @@ ggplot(plot_data, aes(x = timepoint, y = wound_size,
     plot.title = element_text(size = 20, face = "bold"),
     plot.subtitle = element_text(size = 15)
   )
+```
 
+## Plot for healing trajectories by fish
+```{r}
 
+plot_data <- percent_closure %>%
+  select(coral_id, fish, wound, initial_wound_size_cm, wound_size_final) %>%
+  tidyr::pivot_longer(
+    cols = c(initial_wound_size_cm, wound_size_final),
+    names_to = "timepoint", values_to = "wound_size"
+  ) %>%
+  mutate(timepoint = factor(ifelse(timepoint == "initial_wound_size_cm", "Initial", "Final"),
+                            levels = c("Initial", "Final")))
+
+ggplot(plot_data, aes(x = timepoint, y = wound_size,
+                      group = coral_id, color = fish)) +
+  geom_line(alpha = 0.5, size = 1,
+            position = position_jitter(width = 0.05, height = 0)) +
+  geom_point(size = 2, alpha = 0.9,
+             position = position_jitter(width = 0.05, height = 0)) +
+  stat_summary(aes(group = fish),
+               fun = mean, geom = "line", size = 1.5,
+               position = position_dodge(width = 0.3)) +
+  #facet_wrap(~ wound) + #removed free_y
+  scale_color_manual(values = c("No Fish" = "#ad301a", "Fish" = "#2b4b52")) +
+  labs(
+    x = "Timepoint",
+    y = "Wound Size (cm²)",
+    color = "Fish Presence",
+    title = "Initial vs Final Wound Size per Coral",
+    subtitle = "Each line = one coral trajectory"
+  ) +
+  theme_bw(base_size = 16) +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 14),
+    legend.position = "top",
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 13),
+    plot.title = element_text(size = 20, face = "bold"),
+    plot.subtitle = element_text(size = 15)
+  )
+```
+## Plot a simple box plot for healing rate by fish and healing rate by wound
+
+```{r}
+healing_plot <- percent_closure %>% 
+  ggplot(aes(x = fish, y = healing_rate, color = fish)) +
+  geom_jitter(alpha = 0.5, width = 0.1, size = 2.5, shape = 16)+
+  # Median point per group
+  stat_summary(fun = median, geom = "point", size = 5) +
+  # Whiskers (median ± IQR) without horizontal caps
+  stat_summary(fun.data = median_hilow, geom = "errorbar", width = 0, size = 1) +
+  scale_color_manual(values = fish_palette) +
+  scale_y_continuous(limits = c(0, 0.35)) +
+  theme_minimal() +
+   theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 15),
+    axis.text.y = element_text(size = 10),
+    legend.position = "none",
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 13),
+    plot.title = element_text(size = 20, face = "bold"),
+    plot.subtitle = element_text(size = 15), 
+    axis.line.x = element_line(color = "black", size = 0.5),
+    axis.line.y = element_line(color = "black", size = 0.5), 
+    axis.title.x = element_blank(),
+    legend.axis.line = element_blank()
+  )+
+  labs(
+    y = "Healing Rate (mm²/day)"
+  ) 
+
+ggsave(
+  filename = here("figures", "wound_closure", "summary_line_healing_rate_by_fish.pdf"),
+  plot = healing_plot,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
 ```
 
 ##Average values for healing rate, organized by variables

@@ -177,8 +177,8 @@ ggplot( aes(wound, fv_fm, fill = fish))+
   ) +
   theme_bw(base_size = 20) +
   theme(
-    plot.title = element_text(size = 20, face = "bold", hjust = 0.2),
-    plot.subtitle = element_text(size = 16, hjust = 0.6),
+    plot.title = element_text(size = 20, face = "bold"),
+    plot.subtitle = element_text(size = 16),
     axis.text = element_text(size = 16),
     axis.title = element_text(size = 18),
     legend.title = element_text(size = 16),
@@ -190,6 +190,45 @@ ggsave(
   width = 7, height = 5, dpi = 150
 )
 
+```
+## Summary Line Plot of FV/FM by fish
+```{r}
+pam_line_plot <- ggplot(pam_undisturbed_healed_tissue_wound_no_wound,  aes(x = fish, y = fv_fm, color = fish)) +
+  geom_jitter(alpha = 0.5, width = 0.1, size = 2.5, shape = 16)+
+  # Median point per group
+  stat_summary(fun = median, geom = "point", size = 5) +
+  # Whiskers (median ± IQR) without horizontal caps
+  stat_summary(fun.data = median_hilow, geom = "errorbar", width = 0, size = 1) +
+  scale_color_manual(values = fish_palette) +
+  scale_y_continuous(limits = c(0, 0.35)) +
+  theme_minimal() +
+   theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 15),
+    axis.text.y = element_text(size = 10),
+    legend.position = "none",
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 13),
+    plot.title = element_text(size = 20, face = "bold"),
+    plot.subtitle = element_text(size = 15), 
+    axis.line.x = element_line(color = "black", size = 0.5),
+    axis.line.y = element_line(color = "black", size = 0.5), 
+    axis.title.x = element_blank(),
+    legend.axis.line = element_blank()
+  )+
+  labs(
+    y = "Photosynthetic Efficiency (Fv/Fm)"
+  )
+pam_line_plot
+
+ggsave(
+  filename = here("figures", "pam", "summary_line_fv_fm_by_fish.pdf"),
+  plot = healing_plot,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
 ```
 
 ## Linear Models and Anova for Fv/Fm
