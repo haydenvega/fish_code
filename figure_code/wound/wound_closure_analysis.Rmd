@@ -135,10 +135,13 @@ glimpse(wound_closure_clean)
 glimpse(percent_closure)
 
 #...........................aesthetics...........................
-wound_palette <- c("Small" = "#ffbf00", 
-                   "Large" = "#be8333")
+wound_palette <- c("Large" = "#FF8B00", 
+                   "Small" = "#be8333", 
+                   "No Wound" = "#485900")
+
 fish_palette <- c("Fish" = "#2b4b52", 
                   "No Fish" = "#ad301a")
+
 font_add_google(name = "Josefin Sans", family = "josefin")
 showtext_auto()
 theme_set(theme_bw() +
@@ -849,40 +852,187 @@ ggplot(plot_data, aes(x = timepoint, y = wound_size,
   )
 ```
 ## Plot a simple box plot for healing rate by fish and healing rate by wound
+```{r}
+percent_closure %>%
+  ggplot(aes(x = wound, y = healing_rate, fill = fish)) +
+  
+  # Boxplots (dodged by fish)
+  geom_boxplot(
+    width = 0.3,
+    outlier.shape = NA,
+    color = "black",
+    alpha = 0.8,
+    position = position_dodge(width = 0.8)  # match width for jitter
+  ) +
+  
+  # Jitter points (within each dodged boxplot)
+  geom_jitter(
+    aes(color = fish),
+    position = position_jitterdodge(
+      jitter.width = 0.15,   # small horizontal jitter
+      dodge.width = 0.8      # same as boxplot dodge
+    ),
+    size = 2,
+    alpha = 0.5
+  ) +
+  
+  scale_fill_manual(values = fish_palette, breaks = c("No Fish", "Fish")) +
+  scale_color_manual(values = fish_palette, breaks = c("No Fish", "Fish")) +
+  
+  labs(
+    title = "Healing Rate vs Wound Size",
+    x = "Wound Size",
+    y = "Healing Rate (mm²/day)",
+    fill = "Fish Presence",
+    color = "Fish Presence"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 10),
+    legend.position = "top",
+    legend.direction = "horizontal",
+    legend.justification = "left",
+    legend.box.just = "left",
+    legend.title = element_text(size = 12, face = "bold"),
+    legend.text = element_text(size = 12),
+    plot.title = element_text(size = 15, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.line = element_line(color = "black", size = 0.5),
+    axis.ticks.y = element_line(color = "black", size = 0.3),
+    plot.margin = margin(t = 5, r = 5, b = 5, l = 5)
+  )
+ggsave(
+  filename = here("figures", "wound_closure", "boxplot_healing_rate_by_wound_fish.pdf"),
+  plot = healing_plot,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
 
+```
+
+## Summary line plot wound healing by wound size and colored by fish
 ```{r}
 healing_plot <- percent_closure %>% 
-  ggplot(aes(x = fish, y = healing_rate, color = fish)) +
-  geom_jitter(alpha = 0.5, width = 0.1, size = 2.5, shape = 16)+
-  # Median point per group
-  stat_summary(fun = median, geom = "point", size = 5) +
-  # Whiskers (median ± IQR) without horizontal caps
-  stat_summary(fun.data = median_hilow, geom = "errorbar", width = 0, size = 1) +
+  ggplot(aes(x = wound, y = healing_rate, color = fish)) +
+  
+  # Jittered points (dodged)
+  geom_jitter(
+    aes(color = fish),
+    position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.6),
+    size = 2.5,
+    alpha = 0.5,
+    shape = 16
+  ) +
+  
+  # Mean points (dodged)
+  stat_summary(
+    fun = mean,
+    geom = "point",
+    size = 5,
+    position = position_dodge(width = 0.6)
+  ) +
+  
+  # Error bars (mean ± SD) **no horizontal caps**
+  stat_summary(
+    fun.data = function(x) {
+      data.frame(
+        y = mean(x),
+        ymin = mean(x) - sd(x),
+        ymax = mean(x) + sd(x)
+      )
+    },
+    geom = "errorbar",
+    width = 0,                # <- no caps
+    size = 1,
+    position = position_dodge(width = 0.6)
+  ) +
+  
   scale_color_manual(values = fish_palette) +
   scale_y_continuous(limits = c(0, 0.35)) +
+  
   theme_minimal() +
-   theme(
+  theme(
     panel.grid = element_blank(),
     axis.title = element_text(size = 15, face = "bold"),
     axis.text.x = element_text(size = 15),
     axis.text.y = element_text(size = 10),
     legend.position = "none",
-    legend.title = element_text(size = 14, face = "bold"),
-    legend.text = element_text(size = 13),
-    plot.title = element_text(size = 20, face = "bold"),
-    plot.subtitle = element_text(size = 15), 
     axis.line.x = element_line(color = "black", size = 0.5),
-    axis.line.y = element_line(color = "black", size = 0.5), 
-    axis.title.x = element_blank(),
-    legend.axis.line = element_blank()
-  )+
+    axis.line.y = element_line(color = "black", size = 0.5)
+  ) +
   labs(
-    y = "Healing Rate (mm²/day)"
-  ) 
+    y = "Healing Rate (mm²/day)",
+    x = "Wound Size"
+  )
 
 ggsave(
-  filename = here("figures", "wound_closure", "summary_line_healing_rate_by_fish.pdf"),
+  filename = here("figures", "wound_closure", "summary_line_healing_rate_by_wound_fish.pdf"),
   plot = healing_plot,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
+
+```
+### Summary line plot fish by wound only, no color
+
+```{r}
+healing_plot_wound <- percent_closure %>% 
+  ggplot(aes(x = wound, y = healing_rate, color = wound)) +
+  
+  # Jittered points (dodged)
+  geom_jitter(
+    size = 2.5,
+    alpha = 0.5,
+    shape = 16, 
+    width = 0.1
+  ) +
+  
+  # Mean points (dodged)
+  stat_summary(
+    fun = mean,
+    geom = "point",
+    size = 5,
+  ) +
+  
+  # Error bars (mean ± SD) **no horizontal caps**
+  stat_summary(
+    fun.data = function(x) {
+      data.frame(
+        y = mean(x),
+        ymin = mean(x) - sd(x),
+        ymax = mean(x) + sd(x)
+      )
+    },
+    geom = "errorbar",
+    width = 0,                # <- no caps
+    size = 1,
+  ) +
+  
+  scale_color_manual(values = wound_palette) +
+  scale_y_continuous(limits = c(0, 0.35)) +
+  
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 15),
+    axis.text.y = element_text(size = 10),
+    legend.position = "none",
+    axis.line.x = element_line(color = "black", size = 0.5),
+    axis.line.y = element_line(color = "black", size = 0.5)
+  ) +
+  labs(
+    y = "Healing Rate (mm²/day)",
+    x = "Wound Size"
+  )
+
+ggsave(
+  filename = here("figures", "wound_closure", "summary_line_healing_rate_by_wound_only.pdf"),
+  plot = healing_plot_wound,
   width = 7,
   height = 5,
   dpi = 300
