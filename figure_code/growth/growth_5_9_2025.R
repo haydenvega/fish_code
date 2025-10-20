@@ -158,7 +158,7 @@ model_lm <- lm(initial_weight ~ wound * tank, data = bw_plot)
 # ANOVA table
 anova(model_lm)
 
-#no so we move forward with our analysis looking at allooometry next 
+#no so we move forward with our analysis looking at allometry next 
 
 #...................test for differences in SA...................ADRIAN LOOK HERE!
 
@@ -528,6 +528,74 @@ ggsave(
   dpi = 300
 )
 
+# Summary Line Plot now ~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+growth_line_plot_fish <- growth_stats %>% 
+  ggplot(aes(x = wound, y = growth_scaled, color = fish, group = fish)) +
+  
+  # Jittered points, dodged by fish
+  geom_jitter(
+    alpha = 0.5,
+    size = 2.5, 
+    shape = 16, 
+    position = position_jitterdodge(
+      jitter.width = 0.1, 
+      dodge.width = 0.6
+    )
+  ) +
+  
+  # Mean points per fish (dodged)
+  stat_summary(
+    fun = mean, 
+    geom = "point", 
+    size = 5, 
+    position = position_dodge(width = 0.6)
+  ) +
+  
+  # Error bars (mean ± SD, dodged, no horizontal caps)
+  stat_summary(
+    fun.data = function(x) {
+      data.frame(
+        y = mean(x),
+        ymin = mean(x) - sd(x),
+        ymax = mean(x) + sd(x)
+      )
+    },
+    geom = "errorbar",
+    width = 0,                
+    size = 1,
+    position = position_dodge(width = 0.6)
+  ) +
+  
+  # Color palette
+  scale_color_manual(values = fish_palette) +
+  
+  # Y-axis limits
+#  scale_y_continuous(limits = c(500, 800)) +
+  
+  # Labels & theme
+  labs(
+    y = "Photosynthetic Efficiency (Fv/Fm)",
+    x = "Wound Size"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 15),
+    axis.text.y = element_text(size = 10),
+    legend.position = "none",
+    axis.line.x = element_line(color = "black", size = 0.5),
+    axis.line.y = element_line(color = "black", size = 0.5)
+  )
+
+ggsave(
+  here("figures", "growth", "summaryline_scaled_growth_rate.pdf"),
+  width = 7, height = 5, dpi = 150
+)
+
+
 # Visualizing Growth, SA, Time Metric Across Treatments (facet by wound) ~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ADRIAN LOOK HERE!
 
@@ -574,3 +642,4 @@ ggsave(
   height = 6,
   dpi = 300
 )
+
