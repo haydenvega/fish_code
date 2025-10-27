@@ -42,9 +42,10 @@ fish_palette <- c("Fish" = "#2b4b52",
 pam_undisturbed_healed_tissue_wound_no_wound$fish <- factor(
   pam_undisturbed_healed_tissue_wound_no_wound$fish,
   levels = c("No Fish", "Fish"))
+
 pam_undisturbed_healed_tissue_wound_no_wound$wound <- factor(
   pam_undisturbed_healed_tissue_wound_no_wound$wound,
-  levels = c("Small", "Large", "No Wound")  # desired order
+  levels = c("Large", "Small", "No Wound")  # desired order
 )
 ```
 
@@ -215,13 +216,12 @@ ggsave(
 ## Summary Line Plot of FV/FM by fish
 ```{r}
 pam_line_plot_fish <- pam_undisturbed_healed_tissue_wound_no_wound %>% 
-  ggplot(aes(x = wound, y = fv_fm, color = fish, group = fish)) +
+  ggplot(aes(x = wound, y = fv_fm, color = fish, group = fish, shape = fish)) +
   
   # Jittered points, dodged by fish
   geom_jitter(
-    alpha = 0.5,
+    alpha = 0.25,
     size = 2.5, 
-    shape = 16, 
     position = position_jitterdodge(
       jitter.width = 0.1, 
       dodge.width = 0.6
@@ -253,6 +253,7 @@ pam_line_plot_fish <- pam_undisturbed_healed_tissue_wound_no_wound %>%
   
   # Color palette
   scale_color_manual(values = fish_palette) +
+  scale_shape_manual(values = c(16,18))+
   
   # Y-axis limits
   scale_y_continuous(limits = c(500, 800)) +

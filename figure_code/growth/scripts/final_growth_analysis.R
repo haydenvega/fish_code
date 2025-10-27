@@ -37,6 +37,13 @@ library(broom.mixed)
 library(ggpubr)
 library(lme4)
 
+#...........................aesthetics...........................
+wound_palette <- c("Large" = "#FF8B00", 
+                   "Small" = "#be8333", 
+                   "No Wound" = "#485900")
+
+fish_palette <- c("Fish" = "#2b4b52", 
+                  "No Fish" = "#ad301a")
 # ===============================
 # 2. Load Buoyant Weight Data
 # ===============================
@@ -569,6 +576,8 @@ ggsave(
 bw_sa_stats_viz <- bw_sa_stats %>%
   mutate(fish = factor(fish, levels = c("No Fish", "Fish")))
 
+
+
 # Plot: Scaled growth by Fish, faceted by Wound
 ggplot(bw_sa_stats_viz, aes(x = fish, y = bw_sa_time, fill = fish)) +
   geom_boxplot(
@@ -607,3 +616,73 @@ ggsave(
   height = 6,
   dpi = 300
 )
+
+# Visualizing Growth, SA, Time Metric Across Treatments mean, stdev ~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  bw_sa_stats$wound <- factor(bw_sa_stats$wound, levels = c("Large", "Small", "No Wound")) 
+  bw_sa_stats$fsh <-  factor(bw_sa_stats$fish, levels = c("No Fish", "Fish"))
+
+
+  growth_rate_plot<- bw_sa_stats %>% 
+    ggplot(aes(x = wound, y = bw_sa_time, color = fish, shape = fish)) +
+  
+  # Jittered points (dodged)
+  geom_jitter(
+    aes(color = fish),
+    position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.6),
+    size = 2.5,
+    alpha = 0.25,
+    shape = 16
+  ) +
+  
+  # Mean points (dodged)
+  stat_summary(
+    fun = mean,
+    geom = "point",
+    size = 5,
+    position = position_dodge(width = 0.6)
+  ) +
+  
+  # Error bars (mean ± SD) **no horizontal caps**
+  stat_summary(
+    fun.data = function(x) {
+      data.frame(
+        y = mean(x),
+        ymin = mean(x) - sd(x),
+        ymax = mean(x) + sd(x)
+      )
+    },
+    geom = "errorbar",
+    width = 0,                # <- no caps
+    size = 1,
+    position = position_dodge(width = 0.6)
+  ) +
+  
+  scale_color_manual(values = fish_palette) +
+#  scale_y_continuous(limits = c(0, 0.35)) +
+ scale_shape_manual(values = c(16, 18)) +
+
+  
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 15),
+    axis.text.y = element_text(size = 10),
+    legend.position = "none",
+    axis.line.x = element_line(color = "black", size = 0.5),
+    axis.line.y = element_line(color = "black", size = 0.5)
+  ) +
+  labs(
+    y = "Growth Rate (mg/cm²/day)",
+    x = "Wound Size"
+  )
+
+ggsave(
+  filename = here("figures", "growth", "summary_line_growth_rate_by_wound_fish.pdf"),
+  plot = growth_rate_plot,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
+

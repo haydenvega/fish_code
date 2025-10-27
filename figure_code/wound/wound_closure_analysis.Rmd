@@ -77,7 +77,7 @@ prep_treatments <- function(df) {
     mutate(
       fish = ifelse(fish == 1, "Fish", ifelse(fish == 0, "No Fish", fish)),
       wound = case_when(
-        wound == 0 ~ "No wound",
+        wound == 0 ~ "No Wound",
         wound == 1 ~ "Small",
         wound == 2 ~ "Large",
         TRUE ~ as.character(wound)
@@ -85,10 +85,9 @@ prep_treatments <- function(df) {
     ) %>%
     mutate(
       fish  = factor(fish, levels = c("No Fish", "Fish")),
-      wound = factor(wound, levels = c("No wound", "Small", "Large"))
+      wound = factor(wound, levels = c( "Large", "Small", "No Wound"))
     )
 }
-
 #.........................data wrangling.........................
 wound_closure_clean <- wound_closure %>%
   filter(!is.na(wound_close), wound_close != "") %>%
@@ -916,14 +915,14 @@ ggsave(
 ## Summary line plot wound healing by wound size and colored by fish
 ```{r}
 healing_plot <- percent_closure %>% 
-  ggplot(aes(x = wound, y = healing_rate, color = fish)) +
+  ggplot(aes(x = wound, y = healing_rate, color = fish, shape = fish)) +
   
   # Jittered points (dodged)
   geom_jitter(
-    aes(color = fish),
+    aes(color = fish, shape = fish),
     position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.6),
     size = 2.5,
-    alpha = 0.5,
+    alpha = 0.25,
     shape = 16
   ) +
   
@@ -951,6 +950,7 @@ healing_plot <- percent_closure %>%
   ) +
   
   scale_color_manual(values = fish_palette) +
+  scale_shape_manual(values = c(16, 18))+
   scale_y_continuous(limits = c(0, 0.35)) +
   
   theme_minimal() +
@@ -964,7 +964,7 @@ healing_plot <- percent_closure %>%
     axis.line.y = element_line(color = "black", size = 0.5)
   ) +
   labs(
-    y = "Healing Rate (mm²/day)",
+    y = "Healing Rate (cm²/day)",
     x = "Wound Size"
   )
 
@@ -1026,7 +1026,7 @@ healing_plot_wound <- percent_closure %>%
     axis.line.y = element_line(color = "black", size = 0.5)
   ) +
   labs(
-    y = "Healing Rate (mm²/day)",
+    y = "Healing Rate (cm²/day)",
     x = "Wound Size"
   )
 

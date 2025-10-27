@@ -39,7 +39,6 @@ buoy_data%>%
 
 This section contains code for allometric linear models. 
 
-My big question is am I on the right track here? Or are there transformations that I am missing? Also is lm the correct model to run? Should we incorporate other variables into our models?
 
 
 ```{r, message=FALSE, warning=FALSE}
@@ -136,10 +135,7 @@ anova(growth_no_fish, test = "Chisq")
 ```
 ### Quantifying the best fitting model formula
 
-This section contains my poor attempt to try and use the framework in simulating_wound_data.qmd to view how well the differing formulas fit the trends.
-My graph currently yields a big old blank. 
 
-This part was for giggles, so I have a lot of questions; the most important being: is this even useful? Could we just use AIC to test for best fitting models or the anova outputs? My code doesn't work, and I think it's because it doesn't fit with what our goals are for these growth data. Is validating the fit beyond the anova outputs necessary?
 ```{r}
 lrt_int <- anova(growth_lm_no_int, growth_lm_interaction, test = "Chisq")
 
