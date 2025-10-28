@@ -689,7 +689,7 @@ mod_algae <- lmer(fv_fm ~ algae + (1 | tank), data = pam_healed)
 
 ##LRT TESTS
 
-lrt_interaction_algae <- anova(mod_add, mod_int_algae, test = "Chisq")
+lrt_interaction_algae <- anova(mod_algae, mod_int_algae, test = "Chisq")
 lrt_algae <- anova(mod_algae, mod_add_algae, test = "Chisq")
 
 view(lrt_algae)
