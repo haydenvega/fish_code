@@ -1,73 +1,73 @@
 coral_id,f0,fm,fv_fm,wound,fish,tank,initial_wound_size,algae,healed_tissue
-130,306,884,653,Large,No Fish,6,3.805,no,yes
-127,402,1325,696,Large,Fish,3,4.745,no,yes
-126,393,1307,699,Large,Fish,1,3.363,no,yes
-124,297,917,676,Small,No Fish,4,0.956,no,yes
-123,298,927,678,Large,Fish,3,3.713,no,yes
-122,333,1026,675,Small,Fish,3,2.124,no,yes
-121,142,344,587,Large,No Fish,2,2.744,yes,yes
-119,282,961,706,Large,Fish,5,4.558,no,yes
-116,387,1117,653,Small,Fish,5,1.834,no,yes
-115,208,683,673,Small,No Fish,2,1.389,no,yes
-114,344,1108,689,Small,Fish,3,1.097,no,yes
-113,363,1139,681,Large,Fish,3,3.443,no,yes
-111,143,367,601,Large,No Fish,2,1.915,yes,yes
-110,452,1435,685,Large,Fish,5,5.205,no,yes
-109,500,1489,664,Large,Fish,1,2.818,no,yes
-107,356,1091,673,Large,Fish,1,3.593,no,yes
-106,306,1009,696,Small,Fish,3,1.841,no,yes
-105,116,431,614,Small,No Fish,4,1.616,no,yes
-104,119,311,617,Small,No Fish,4,1.291,no,yes
-103,285,777,633,Large,No Fish,4,2.526,yes,yes
-101,571,1847,690,Small,Fish,5,1.368,no,yes
-100,373,1227,696,Small,Fish,5,1.561,no,yes
-99,437,1352,676,Large,Fish,5,6.277,no,yes
-97,216,596,637,Large,No Fish,4,3.732,no,yes
-96,371,1234,696,Small,Fish,1,2.598,no,yes
-95,147,382,615,Large,No Fish,2,1.02,yes,yes
-91,189,420,550,Small,No Fish,5,1.593,yes,yes
-89,191,569,664,Small,No Fish,2,1.513,no,yes
-87,447,1458,693,Small,No Fish,6,1.326,no,yes
-80,250,821,695,Small,No Fish,6,1.284,no,yes
-79,321,973,670,Large,No Fish,6,3.624,no,yes
-78,220,691,681,Small,No Fish,6,1.346,no,yes
-75,377,1203,686,Large,Fish,5,6.188,no,yes
-72,262,829,683,Small,Fish,3,1.895,no,yes
-71,99,229,567,Large,No Fish,4,3.488,no,yes
-69,90,262,656,Large,No Fish,4,3.638,yes,yes
-65,244,745,672,Large,No Fish,6,2.35,no,yes
-62,289,887,674,Small,Fish,1,1.572,no,yes
-61,550,1582,652,Small,Fish,1,1.073,no,yes
-59,278,873,681,Large,No Fish,2,4.052,no,yes
-58,118,316,626,Large,No Fish,2,4.068,yes,yes
-56,244,615,603,Small,Fish,3,4.071,yes,yes
-55,241,766,685,Large,Fish,2,1.213,no,yes
-50,353,1052,664,Small,No Fish,6,3.001,no,yes
-48,382,1277,700,Small,No Fish,1,1.531,no,yes
-47,241,756,681,Small,Fish,6,1.257,no,yes
-45,304,965,684,Large,Fish,1,4.674,no,yes
-129,205,600,658,Small,No Fish,4,N/A,no,no
-128,490,1485,670,No Wound,Fish,1,N/A,no,no
-125,494,1419,668,No Wound,Fish,3,N/A,no,no
-120,510,1594,680,No Wound,Fish,5,N/A,no,no
-118,325,1023,682,No Wound,Fish,1,N/A,no,no
-117,333,1090,694,No Wound,No Fish,6,N/A,no,no
-112,397,1284,690,No Wound,No Fish,4,N/A,no,no
-108,329,1117,705,No Wound,Fish,1,N/A,no,no
-102,540,1808,701,No Wound,Fish,5,N/A,no,no
-98,456,1458,687,No Wound,No Fish,6,N/A,no,no
-90,503,1625,690,No Wound,Fish,1,N/A,no,no
-88,377,1246,697,No Wound,No Fish,2,N/A,no,no
-86,290,895,675,No Wound,No Fish,6,N/A,no,no
-85,338,1049,677,No Wound,No Fish,4,N/A,no,no
-84,325,949,657,No Wound,No Fish,4,N/A,no,no
-83,431,1378,687,No Wound,No Fish,6,N/A,no,no
-81,486,1585,693,No Wound,Fish,3,N/A,no,no
-78,511,1603,681,No Wound,No Fish,2,N/A,no,no
-77,416,1355,692,No Wound,Fish,3,N/A,no,no
-74,437,1341,674,No Wound,Fish,5,N/A,no,no
-67,329,1055,688,No Wound,No Fish,2,N/A,no,no
-64,206,642,671,No Wound,No Fish,4,N/A,no,no
-63,450,1432,685,No Wound,Fish,5,N/A,no,no
-48,408,1359,699,No Wound,No Fish,1,N/A,no,no
-46,372,1206,691,No Wound,Fish,3,N/A,no,no
+130,306,884,0.653,Large,No Fish,6,3.805,no,yes
+127,402,1325,0.696,Large,Fish,3,4.745,no,yes
+126,393,1307,0.699,Large,Fish,1,3.363,no,yes
+124,297,917,0.676,Small,No Fish,4,0.956,no,yes
+123,298,927,0.678,Large,Fish,3,3.713,no,yes
+122,333,1026,0.675,Small,Fish,3,2.124,no,yes
+121,142,344,0.587,Large,No Fish,2,2.744,yes,yes
+119,282,961,0.706,Large,Fish,5,4.558,no,yes
+116,387,1117,0.653,Small,Fish,5,1.834,no,yes
+115,208,683,0.673,Small,No Fish,2,1.389,no,yes
+114,344,1108,0.689,Small,Fish,3,1.097,no,yes
+113,363,1139,0.681,Large,Fish,3,3.443,no,yes
+111,143,367,0.601,Large,No Fish,2,1.915,yes,yes
+110,452,1435,0.685,Large,Fish,5,5.205,no,yes
+109,500,1489,0.664,Large,Fish,1,2.818,no,yes
+107,356,1091,0.673,Large,Fish,1,3.593,no,yes
+106,306,1009,0.696,Small,Fish,3,1.841,no,yes
+105,116,431,0.614,Small,No Fish,4,1.616,no,yes
+104,119,311,0.617,Small,No Fish,4,1.291,no,yes
+103,285,777,0.633,Large,No Fish,4,2.526,yes,yes
+101,571,1847,0.69,Small,Fish,5,1.368,no,yes
+100,373,1227,0.696,Small,Fish,5,1.561,no,yes
+99,437,1352,0.676,Large,Fish,5,6.277,no,yes
+97,216,596,0.637,Large,No Fish,4,3.732,no,yes
+96,371,1234,0.696,Small,Fish,1,2.598,no,yes
+95,147,382,0.615,Large,No Fish,2,1.02,yes,yes
+91,189,420,0.55,Small,No Fish,5,1.593,yes,yes
+89,191,569,0.664,Small,No Fish,2,1.513,no,yes
+87,447,1458,0.693,Small,No Fish,6,1.326,no,yes
+80,250,821,0.695,Small,No Fish,6,1.284,no,yes
+79,321,973,0.67,Large,No Fish,6,3.624,no,yes
+78,220,691,0.681,Small,No Fish,6,1.346,no,yes
+75,377,1203,0.686,Large,Fish,5,6.188,no,yes
+72,262,829,0.683,Small,Fish,3,1.895,no,yes
+71,99,229,0.567,Large,No Fish,4,3.488,no,yes
+69,90,262,0.656,Large,No Fish,4,3.638,yes,yes
+65,244,745,0.672,Large,No Fish,6,2.35,no,yes
+62,289,887,0.674,Small,Fish,1,1.572,no,yes
+61,550,1582,0.652,Small,Fish,1,1.073,no,yes
+59,278,873,0.681,Large,No Fish,2,4.052,no,yes
+58,118,316,0.626,Large,No Fish,2,4.068,yes,yes
+56,244,615,0.603,Small,Fish,3,4.071,yes,yes
+55,241,766,0.685,Large,Fish,2,1.213,no,yes
+50,353,1052,0.664,Small,No Fish,6,3.001,no,yes
+48,382,1277,0.7,Small,No Fish,1,1.531,no,yes
+47,241,756,0.681,Small,Fish,6,1.257,no,yes
+45,304,965,0.684,Large,Fish,1,4.674,no,yes
+129,205,600,0.658,Small,No Fish,4,N/A,no,no
+128,490,1485,0.67,No Wound,Fish,1,N/A,no,no
+125,494,1419,0.668,No Wound,Fish,3,N/A,no,no
+120,510,1594,0.68,No Wound,Fish,5,N/A,no,no
+118,325,1023,0.682,No Wound,Fish,1,N/A,no,no
+117,333,1090,0.694,No Wound,No Fish,6,N/A,no,no
+112,397,1284,0.69,No Wound,No Fish,4,N/A,no,no
+108,329,1117,0.705,No Wound,Fish,1,N/A,no,no
+102,540,1808,0.701,No Wound,Fish,5,N/A,no,no
+98,456,1458,0.687,No Wound,No Fish,6,N/A,no,no
+90,503,1625,0.69,No Wound,Fish,1,N/A,no,no
+88,377,1246,0.697,No Wound,No Fish,2,N/A,no,no
+86,290,895,0.675,No Wound,No Fish,6,N/A,no,no
+85,338,1049,0.677,No Wound,No Fish,4,N/A,no,no
+84,325,949,0.657,No Wound,No Fish,4,N/A,no,no
+83,431,1378,0.687,No Wound,No Fish,6,N/A,no,no
+81,486,1585,0.693,No Wound,Fish,3,N/A,no,no
+78,511,1603,0.681,No Wound,No Fish,2,N/A,no,no
+77,416,1355,0.692,No Wound,Fish,3,N/A,no,no
+74,437,1341,0.674,No Wound,Fish,5,N/A,no,no
+67,329,1055,0.688,No Wound,No Fish,2,N/A,no,no
+64,206,642,0.671,No Wound,No Fish,4,N/A,no,no
+63,450,1432,0.685,No Wound,Fish,5,N/A,no,no
+48,408,1359,0.699,No Wound,No Fish,1,N/A,no,no
+46,372,1206,0.691,No Wound,Fish,3,N/A,no,no

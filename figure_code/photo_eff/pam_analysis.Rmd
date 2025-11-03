@@ -256,7 +256,7 @@ pam_line_plot_fish <- pam_undisturbed_healed_tissue_wound_no_wound %>%
   scale_shape_manual(values = c(16,18))+
   
   # Y-axis limits
-  scale_y_continuous(limits = c(500, 800)) +
+  scale_y_continuous(limits = c(0.5, 0.750)) +
   
   # Labels & theme
   labs(
@@ -304,7 +304,7 @@ pam_line_plot_wound <- ggplot(pam_undisturbed_healed_tissue_wound_no_wound,  aes
   size = 1
 ) +
   scale_color_manual(values = wound_palette) +
-  scale_y_continuous(limits = c(500, 800)) +
+  scale_y_continuous(limits = c(0.500, 0.7500)) +
   theme_minimal() +
    theme(
     panel.grid = element_blank(),
@@ -647,12 +647,41 @@ pam_avg <- pam_undisturbed_healed_tissue_wound_no_wound %>%
   summarize(mean_fv_fm = mean(fv_fm, na.rm = TRUE), 
             sd_both_rate = sd(fv_fm, na.rm = TRUE), 
             n = n())
-# NF, S = 657.0, 43.46
-# NF, L = 633.1, 35.68
-#NF, NW = 683.5833, 12.06
-#F, S = 674.0, 27.001
-#F, L = 684.4, 11.62
-#F, NW = 685.9, 11.63
+	
+# No Fish
+# Large
+# 0.6331667
+# 0.03568507
+# 12
+# 2
+# No Fish
+# Small
+# 0.6570833
+# 0.04346254
+# 12
+# 3
+# No Fish
+# No Wound
+# 0.6835833
+# 0.01205637
+# 12
+# 4
+# Fish
+# Large
+# 0.6844167
+# 0.01162645
+# 12
+# 5
+# Fish
+# Small
+# 0.6740000
+# 0.02701851
+# 12
+# 6
+# Fish
+# No Wound
+# 0.6859167
+# 0.01163426
 ```
 
 
