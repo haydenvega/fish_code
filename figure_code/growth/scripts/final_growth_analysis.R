@@ -85,6 +85,14 @@ bw_sa_wide <- left_join(bw_wide, sa, by = "coral_id") %>%
     tank = as.factor(tank)
   ) %>% 
   mutate(tank = factor(tank, levels = sort(unique(as.numeric(as.character(tank))))))
+# Prep data: drop NAs, ensure proper factor levels
+bw_sa_df <- bw_sa_wide %>%
+  drop_na(initial_weight, final_weight, wound) %>%
+  filter(coral_id != 103) %>% 
+  mutate(
+    delta_mass = final_weight - initial_weight,
+    wound = factor(wound, levels = c("No Wound", "Small", "Large"))
+  )
   
 # ===============================
 # 3. Load Tank Metadata
@@ -297,14 +305,6 @@ ggsave(
 
 #..................Visualizing SA by Inital Mass and Treatment..................
 
-# Prep data: drop NAs, ensure proper factor levels
-bw_sa_df <- bw_sa_wide %>%
-  drop_na(initial_weight, final_weight, wound) %>%
-  filter(coral_id != 103) %>% 
-  mutate(
-    delta_mass = final_weight - initial_weight,
-    wound = factor(wound, levels = c("No Wound", "Small", "Large"))
-  )
 
 # Plot: SA vs. Initial Mass, colored by Wound Treatment
 ggplot(bw_sa_df, aes(x = initial_weight, y = sa_cal, color = wound)) +
@@ -621,7 +621,8 @@ ggsave(
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   bw_sa_stats$wound <- factor(bw_sa_stats$wound, levels = c("Large", "Small", "No Wound")) 
   bw_sa_stats$fsh <-  factor(bw_sa_stats$fish, levels = c("No Fish", "Fish"))
-
+  bw_sa_stats$bw_sa_time <- bw_sa_stats$bw_sa_time * 1000
+  
 
   growth_rate_plot<- bw_sa_stats %>% 
     ggplot(aes(x = wound, y = bw_sa_time, color = fish, shape = fish)) +
@@ -661,6 +662,7 @@ ggsave(
   scale_color_manual(values = fish_palette) +
 #  scale_y_continuous(limits = c(0, 0.35)) +
  scale_shape_manual(values = c(16, 18)) +
+ coord_cartesian(ylim = c(0, 1.5))+
 
   
   theme_minimal() +
