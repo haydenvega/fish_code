@@ -182,7 +182,7 @@ bw_plot <- bw_merged %>%
 # ===============================
 # Create a dataset with log-transformed weights and growth ratio
 # Drop NAs to ensure valid model fitting
-log_df <- bw_merged %>%
+log_df <- bw_sa_df %>%
   mutate(
     log_i_weight = log(initial_weight),
     log_f_weight = log(final_weight),
@@ -410,13 +410,13 @@ lrt_table %>%
 
 #..........Statistical Analysis of Growth/SA/Time Metric.........ADRIAN LOOK HERE!
 
-bw_sa_stats <- bw_sa_df %>%
+bw_sa_stats <- log_df %>%
   drop_na(initial_weight, final_weight, fish, wound, tank) %>%
   mutate(
     wound = factor(wound, levels = c("No Wound", "Small", "Large")),
     fish = factor(fish),
     tank = factor(tank),
-    bw_sa_time = (final_weight - initial_weight) / (sa_cal * 21) 
+    bw_sa_time = (growth_ratio) / (sa_cal * 21) 
   )
 
 
@@ -486,7 +486,7 @@ lrt_table %>%
   gt() %>%
   tab_header(
     title = "Table 2. Likelihood Ratio Tests for Effects on Coral Growth as a function of Surface Area and Time",
-    subtitle = paste("Scaled growth:", expression((final - initial)/(surface_area * 21)))
+    subtitle = paste("Scaled growth:", expression((scaled_growth)/(surface_area * 21)))
   ) %>%
   cols_label(
     Test = "Model Comparison",
