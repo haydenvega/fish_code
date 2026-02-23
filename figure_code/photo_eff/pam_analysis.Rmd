@@ -743,6 +743,11 @@ view(lrt_algae)
 
 # OLD CODE
 
+##Looking at algae  for ashley
+```{r}
+table(pam_undisturbed_healed_tissue_wound_no_wound$algae, pam_undisturbed_healed_tissue_wound_no_wound$coral_id)
+```
+
 ### Boxplot of Pam for undisturbed tissue
 ```{r}
 
