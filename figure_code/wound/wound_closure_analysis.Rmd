@@ -1315,22 +1315,22 @@ print(r2_full)
 
 ### ashely algae healing figure
 ```{r}
-# highlight_ids <- c("56", "58", "69", "91", "95", "103", "111", "121")
-# percent_closure %>% 
-#   ggplot(aes(wound, healing_rate, color = fish))+
-#   geom_point()+
-#   geom_point(data = subset(percent_closure, coral_id %in% highlight_ids), 
-#              color = "blue", 
-#              size = 3)+
-#   geom_jitter(
-#     position = position_jitterdodge(
-#       jitter.width = 0.15,
-#       dodge.width  = 0.6
-#     ),
-#     alpha = 0.7,
-#     size = 2
-#   )+
-#   theme_classic()
+highlight_ids <- c("56", "58", "69", "91", "95", "103", "111", "121")
+percent_closure %>%
+  ggplot(aes(wound, healing_rate))+
+  geom_point()+
+  geom_point(data = subset(percent_closure, coral_id %in% highlight_ids),
+             color = "blue",
+             size = 3)+
+  # geom_jitter(
+  #   position = position_jitterdodge(
+  #     jitter.width = 0.15,
+  #     dodge.width  = 0.6
+  #   ),
+  #   alpha = 0.7,
+  #   size = 2
+  # )+
+  theme_classic()
 
 percent_closure_plot <- percent_closure %>%
   mutate(wound = droplevels(wound))
